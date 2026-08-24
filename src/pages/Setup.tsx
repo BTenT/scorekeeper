@@ -41,14 +41,14 @@ export function Setup({ presetPlayers, onBack }: { presetPlayers?: Player[]; onB
   return (
     <div className="flex min-h-dvh flex-col px-4 pt-[max(1.5rem,env(safe-area-inset-top))] pb-6">
       <header className="mb-6 flex items-center gap-3">
-        <button onClick={onBack} className="rounded-full bg-white px-3 py-1.5 text-sm font-semibold shadow-sm active:bg-stone-50">
+        <button onClick={onBack} className="rounded-full bg-white px-3 py-1.5 text-sm font-semibold shadow-sm active:bg-stone-50 dark:bg-stone-800 dark:active:bg-stone-700">
           ← {t.back}
         </button>
         <h1 className="text-xl font-bold">{t.newGame}</h1>
       </header>
 
       <section className="mb-6">
-        <h2 className="mb-2 font-semibold text-stone-600">{t.players}</h2>
+        <h2 className="mb-2 font-semibold text-stone-600 dark:text-stone-300">{t.players}</h2>
         <div className="space-y-2">
           {names.map((name, i) => (
             <div key={i} className="flex gap-2">
@@ -56,14 +56,14 @@ export function Setup({ presetPlayers, onBack }: { presetPlayers?: Player[]; onB
                 value={name}
                 onChange={(e) => setNames(names.map((n, j) => (j === i ? e.target.value : n)))}
                 placeholder={t.playerName(i)}
-                className="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-base shadow-sm outline-red-700"
+                className="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-base shadow-sm outline-red-700 dark:border-stone-700 dark:bg-stone-800 dark:outline-red-400"
                 enterKeyHint="next"
               />
               {names.length > MIN_PLAYERS && (
                 <button
                   onClick={() => setNames(names.filter((_, j) => j !== i))}
                   aria-label={t.removePlayer}
-                  className="rounded-xl bg-white px-3 text-stone-400 shadow-sm active:bg-stone-50"
+                  className="rounded-xl bg-white px-3 text-stone-400 shadow-sm active:bg-stone-50 dark:bg-stone-800 dark:active:bg-stone-700"
                 >
                   ✕
                 </button>
@@ -74,7 +74,7 @@ export function Setup({ presetPlayers, onBack }: { presetPlayers?: Player[]; onB
         {names.length < MAX_PLAYERS && (
           <button
             onClick={() => setNames([...names, ''])}
-            className="mt-2 text-sm font-semibold text-red-700 active:text-red-900"
+            className="mt-2 text-sm font-semibold text-red-700 active:text-red-900 dark:text-red-400 dark:active:text-red-300"
           >
             {t.addPlayer}
           </button>
@@ -82,12 +82,12 @@ export function Setup({ presetPlayers, onBack }: { presetPlayers?: Player[]; onB
       </section>
 
       <section className="mb-8">
-        <h2 className="mb-2 font-semibold text-stone-600">{t.rules}</h2>
-        <div className="space-y-2 rounded-2xl bg-white p-4 shadow-sm">
+        <h2 className="mb-2 font-semibold text-stone-600 dark:text-stone-300">{t.rules}</h2>
+        <div className="space-y-2 rounded-2xl bg-white p-4 shadow-sm dark:bg-stone-800">
           <select
             value={ruleSetId}
             onChange={(e) => setRuleSetId(e.target.value)}
-            className="w-full rounded-xl border border-stone-200 bg-white px-3 py-3 text-base"
+            className="w-full rounded-xl border border-stone-200 bg-white px-3 py-3 text-base dark:border-stone-600 dark:bg-stone-800"
           >
             {ruleSets.map((r) => (
               <option key={r.id} value={r.id}>
@@ -104,7 +104,7 @@ export function Setup({ presetPlayers, onBack }: { presetPlayers?: Player[]; onB
       <button
         onClick={start}
         disabled={!canStart}
-        className="mt-auto w-full rounded-2xl bg-red-700 px-4 py-4 text-lg font-bold text-white shadow-lg shadow-red-700/20 active:bg-red-800 disabled:bg-stone-300 disabled:shadow-none"
+        className="mt-auto w-full rounded-2xl bg-red-700 px-4 py-4 text-lg font-bold text-white shadow-lg shadow-red-700/20 active:bg-red-800 disabled:bg-stone-300 disabled:shadow-none dark:bg-red-400 dark:text-red-950 dark:shadow-red-400/10 dark:active:bg-red-300 dark:disabled:bg-stone-700 dark:disabled:text-stone-400"
       >
         {t.start}
       </button>
@@ -115,14 +115,14 @@ export function Setup({ presetPlayers, onBack }: { presetPlayers?: Player[]; onB
 function NumberField({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
   return (
     <label className="flex items-center justify-between gap-3">
-      <span className="text-stone-600">{label}</span>
+      <span className="text-stone-600 dark:text-stone-300">{label}</span>
       <input
         type="number"
         inputMode="numeric"
         value={value}
         min={0}
         onChange={(e) => onChange(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
-        className="w-24 rounded-xl border border-stone-200 px-3 py-2 text-right text-base"
+        className="w-24 rounded-xl border border-stone-200 px-3 py-2 text-right text-base dark:border-stone-600 dark:bg-stone-900"
       />
     </label>
   )

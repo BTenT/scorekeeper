@@ -33,7 +33,7 @@ export function RoundEntry({ game, roundNumber, onSave, onCancel }: Props) {
   return (
     <div className="fixed inset-0 z-10 flex items-end justify-center bg-black/40" onClick={onCancel}>
       <div
-        className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+        className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] dark:bg-stone-900"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">
@@ -42,7 +42,11 @@ export function RoundEntry({ game, roundNumber, onSave, onCancel }: Props) {
           </h2>
           <span
             className={`rounded-full px-3 py-1 text-sm font-bold tabular-nums ${
-              left === 0 ? 'bg-green-100 text-green-700' : left < 0 ? 'bg-red-100 text-red-700' : 'bg-stone-100 text-stone-600'
+              left === 0
+                ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                : left < 0
+                  ? 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400'
+                  : 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300'
             }`}
           >
             {left < 0 ? t.tooMany(-left) : t.remaining(left, total)}
@@ -55,7 +59,7 @@ export function RoundEntry({ game, roundNumber, onSave, onCancel }: Props) {
               <span className="w-24 truncate font-semibold">{p.name}</span>
               <button
                 onClick={() => setPlayerPoints(p.id, points[p.id] - 1)}
-                className="h-11 w-11 rounded-xl bg-stone-100 text-xl font-bold active:bg-stone-200"
+                className="h-11 w-11 rounded-xl bg-stone-100 text-xl font-bold active:bg-stone-200 dark:bg-stone-800 dark:active:bg-stone-700"
                 aria-label={`${p.name} -1`}
               >
                 −
@@ -68,11 +72,11 @@ export function RoundEntry({ game, roundNumber, onSave, onCancel }: Props) {
                 value={points[p.id]}
                 onFocus={(e) => e.target.select()}
                 onChange={(e) => setPlayerPoints(p.id, Math.floor(Number(e.target.value) || 0))}
-                className="h-11 w-14 rounded-xl border border-stone-200 text-center text-lg font-bold tabular-nums"
+                className="h-11 w-14 rounded-xl border border-stone-200 text-center text-lg font-bold tabular-nums dark:border-stone-700 dark:bg-stone-800"
               />
               <button
                 onClick={() => setPlayerPoints(p.id, points[p.id] + 1)}
-                className="h-11 w-11 rounded-xl bg-stone-100 text-xl font-bold active:bg-stone-200"
+                className="h-11 w-11 rounded-xl bg-stone-100 text-xl font-bold active:bg-stone-200 dark:bg-stone-800 dark:active:bg-stone-700"
                 aria-label={`${p.name} +1`}
               >
                 +
@@ -80,13 +84,13 @@ export function RoundEntry({ game, roundNumber, onSave, onCancel }: Props) {
               <button
                 onClick={() => setPlayerPoints(p.id, points[p.id] + left)}
                 disabled={left <= 0}
-                className="h-11 rounded-xl bg-stone-100 px-2 text-xs font-bold text-stone-500 active:bg-stone-200 disabled:opacity-30"
+                className="h-11 rounded-xl bg-stone-100 px-2 text-xs font-bold text-stone-500 active:bg-stone-200 disabled:opacity-30 dark:bg-stone-800 dark:text-stone-400 dark:active:bg-stone-700"
               >
                 rest
               </button>
               <button
                 onClick={() => setPitPlayer(p.id)}
-                className="h-11 rounded-xl bg-red-50 px-2 text-xs font-bold text-red-700 active:bg-red-100"
+                className="h-11 rounded-xl bg-red-50 px-2 text-xs font-bold text-red-700 active:bg-red-100 dark:bg-red-950 dark:text-red-400 dark:active:bg-red-900"
               >
                 {t.pit}
               </button>
@@ -95,13 +99,13 @@ export function RoundEntry({ game, roundNumber, onSave, onCancel }: Props) {
         </div>
 
         <div className="mt-4 flex gap-2">
-          <button onClick={onCancel} className="w-1/3 rounded-2xl bg-stone-100 py-3 font-bold text-stone-600 active:bg-stone-200">
+          <button onClick={onCancel} className="w-1/3 rounded-2xl bg-stone-100 py-3 font-bold text-stone-600 active:bg-stone-200 dark:bg-stone-800 dark:text-stone-300 dark:active:bg-stone-700">
             {t.cancel}
           </button>
           <button
             onClick={() => onSave(round)}
             disabled={!valid}
-            className="w-2/3 rounded-2xl bg-red-700 py-3 font-bold text-white active:bg-red-800 disabled:bg-stone-300"
+            className="w-2/3 rounded-2xl bg-red-700 py-3 font-bold text-white active:bg-red-800 disabled:bg-stone-300 dark:bg-red-400 dark:text-red-950 dark:active:bg-red-300 dark:disabled:bg-stone-700 dark:disabled:text-stone-400"
           >
             {t.save}
           </button>
@@ -109,26 +113,26 @@ export function RoundEntry({ game, roundNumber, onSave, onCancel }: Props) {
 
         {pitPlayer && (
           <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 p-6" onClick={() => setPitPlayer(null)}>
-            <div className="w-full max-w-sm rounded-3xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="w-full max-w-sm rounded-3xl bg-white p-5 dark:bg-stone-900" onClick={(e) => e.stopPropagation()}>
               <h3 className="mb-4 text-center text-lg font-bold">
                 💥 {t.pitTitle(game.players.find((p) => p.id === pitPlayer)!.name)}
               </h3>
               <div className="space-y-2">
                 <button
                   onClick={() => savePit('self')}
-                  className="w-full rounded-2xl bg-red-700 py-3 font-bold text-white active:bg-red-800"
+                  className="w-full rounded-2xl bg-red-700 py-3 font-bold text-white active:bg-red-800 dark:bg-red-400 dark:text-red-950 dark:active:bg-red-300"
                 >
                   {t.pitSelf(game.ruleSet.pit.selfDelta)}
                 </button>
                 <button
                   onClick={() => savePit('others')}
-                  className="w-full rounded-2xl bg-red-700 py-3 font-bold text-white active:bg-red-800"
+                  className="w-full rounded-2xl bg-red-700 py-3 font-bold text-white active:bg-red-800 dark:bg-red-400 dark:text-red-950 dark:active:bg-red-300"
                 >
                   {t.pitOthers(game.ruleSet.pit.othersDelta)}
                 </button>
                 <button
                   onClick={() => setPitPlayer(null)}
-                  className="w-full rounded-2xl bg-stone-100 py-3 font-bold text-stone-600 active:bg-stone-200"
+                  className="w-full rounded-2xl bg-stone-100 py-3 font-bold text-stone-600 active:bg-stone-200 dark:bg-stone-800 dark:text-stone-300 dark:active:bg-stone-700"
                 >
                   {t.cancel}
                 </button>

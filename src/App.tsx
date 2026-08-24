@@ -38,7 +38,7 @@ function Shell() {
 function App() {
   return (
     <GameStoreProvider>
-      <div className="min-h-dvh bg-stone-100 text-stone-900" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <div className="min-h-dvh bg-stone-100 text-stone-900 dark:bg-stone-950 dark:text-stone-100" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="mx-auto max-w-md">
           <Shell />
         </div>
