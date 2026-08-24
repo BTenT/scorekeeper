@@ -11,11 +11,20 @@ interface Props {
 }
 
 export function RoundEntry({ game, roundNumber, onSave, onCancel }: Props) {
-  const [points, setPoints] = useState<Record<PlayerId, number>>(
-    Object.fromEntries(game.players.map((p) => [p.id, 0])),
+  // Draft values are strings so the field may be empty while typing
+  // (deleting the 0 first, then entering a number).
+  const [draft, setDraft] = useState<Record<PlayerId, string>>(
+    Object.fromEntries(game.players.map((p) => [p.id, '0'])),
   )
   const [pitPlayer, setPitPlayer] = useState<PlayerId | null>(null)
   const total = game.ruleSet.pointsPerRound
+
+  const points: Record<PlayerId, number> = Object.fromEntries(
+    game.players.map((p) => {
+      const n = parseInt(draft[p.id], 10)
+      return [p.id, Number.isNaN(n) ? 0 : n]
+    }),
+  )
   const used = Object.values(points).reduce((a, b) => a + b, 0)
   const left = total - used
 
@@ -23,7 +32,16 @@ export function RoundEntry({ game, roundNumber, onSave, onCancel }: Props) {
   const valid = validateRound(round, game.ruleSet, game.players.map((p) => p.id)).valid
 
   function setPlayerPoints(id: PlayerId, value: number) {
-    setPoints({ ...points, [id]: Math.max(0, Math.min(total, value)) })
+    setDraft({ ...draft, [id]: String(Math.max(0, Math.min(total, value))) })
+  }
+
+  function typePlayerPoints(id: PlayerId, raw: string) {
+    const digits = raw.replace(/\D/g, '')
+    if (digits === '') {
+      setDraft({ ...draft, [id]: '' })
+      return
+    }
+    setDraft({ ...draft, [id]: String(Math.min(total, parseInt(digits, 10))) })
   }
 
   function savePit(choice: PitChoice) {
@@ -65,13 +83,15 @@ export function RoundEntry({ game, roundNumber, onSave, onCancel }: Props) {
                 −
               </button>
               <input
-                type="number"
+                type="text"
                 inputMode="numeric"
-                min={0}
-                max={total}
-                value={points[p.id]}
+                pattern="[0-9]*"
+                value={draft[p.id]}
                 onFocus={(e) => e.target.select()}
-                onChange={(e) => setPlayerPoints(p.id, Math.floor(Number(e.target.value) || 0))}
+                onChange={(e) => typePlayerPoints(p.id, e.target.value)}
+                onBlur={() => {
+                  if (draft[p.id] === '') setDraft((d) => ({ ...d, [p.id]: '0' }))
+                }}
                 className="h-11 w-14 rounded-xl border border-stone-200 text-center text-lg font-bold tabular-nums dark:border-stone-700 dark:bg-stone-800"
               />
               <button
