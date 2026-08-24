@@ -94,9 +94,29 @@ describe('scoring', () => {
   })
 
   it('a low player dropping below 0 in the return game wins', () => {
+    const state = computeState(game([...aTo100, points({ a: 0, b: 0, c: 25, d: 0 })]))
+    expect(state.winnerId).toBe('c')
+    expect(state.pendingTie).toBeNull()
+  })
+
+  it('several players below 0 at once leaves a pending tie: the app must ask who declared out first', () => {
     const state = computeState(game([...aTo100, points({ a: 0, b: 0, c: 10, d: 15 })]))
-    // c: -10, d: -15 -> lowest score wins
-    expect(state.winnerId).toBe('d')
+    expect(state.winnerId).toBeNull()
+    expect(state.pendingTie).toEqual(['c', 'd'])
+  })
+
+  it('the recorded tie choice wins, even with the higher score', () => {
+    const tieGame = { ...game([...aTo100, points({ a: 0, b: 0, c: 10, d: 15 })]), tieWinnerId: 'c' }
+    const state = computeState(tieGame)
+    expect(state.winnerId).toBe('c') // c: -10, d: -15 — c declared out first
+    expect(state.pendingTie).toBeNull()
+  })
+
+  it('ignores a tie choice for a player who is not below 0', () => {
+    const tieGame = { ...game([...aTo100, points({ a: 0, b: 0, c: 10, d: 15 })]), tieWinnerId: 'a' }
+    const state = computeState(tieGame)
+    expect(state.winnerId).toBeNull()
+    expect(state.pendingTie).toEqual(['c', 'd'])
   })
 
   it('a player who is already negative when the return game starts wins immediately', () => {
@@ -171,6 +191,7 @@ describe('payment', () => {
     const state = {
       winnerId: 'a',
       phase: 'down' as const,
+      pendingTie: null,
       standings: [
         { playerId: 'a', score: -15 },
         { playerId: 'b', score: -10 },

@@ -24,6 +24,7 @@ export function computeState(game: Game): GameState {
   let standings = game.players.map((p) => ({ playerId: p.id, score: 0 }))
   let phase: Phase = 'up'
   let winnerId: PlayerId | null = null
+  let pendingTie: PlayerId[] | null = null
 
   for (const round of game.rounds) {
     if (winnerId) break
@@ -43,14 +44,22 @@ export function computeState(game: Game): GameState {
     // who were already negative (e.g. from a pit) when the return game started.
     if (phase === 'down') {
       const winners = standings.filter((s) => s.score < game.ruleSet.winBelow)
-      if (winners.length > 0) {
-        // If several are below 0 at once, the lowest score wins.
-        winnerId = winners.reduce((a, b) => (b.score < a.score ? b : a)).playerId
+      if (winners.length === 1) {
+        winnerId = winners[0].playerId
+      } else if (winners.length > 1) {
+        // Several players below 0 at once: whoever declared out first wins.
+        // That choice is recorded on the game; until then the tie is pending.
+        if (game.tieWinnerId && winners.some((w) => w.playerId === game.tieWinnerId)) {
+          winnerId = game.tieWinnerId
+        } else {
+          pendingTie = winners.map((w) => w.playerId)
+          break
+        }
       }
     }
   }
 
-  return { standings, phase, winnerId }
+  return { standings, phase, winnerId, pendingTie }
 }
 
 /** Standings after each round, for the score history table. */

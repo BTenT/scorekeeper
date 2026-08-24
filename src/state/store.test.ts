@@ -44,6 +44,16 @@ describe('gameStore reducer', () => {
     expect(state.games[0].rounds[0].kind).toBe('points')
   })
 
+  it('records a tie winner and clears it on undo', () => {
+    let state = reducer(empty, { type: 'new-game', players, ruleSet: huisregels })
+    const id = state.games[0].id
+    state = reducer(state, { type: 'add-round', gameId: id, round: { kind: 'points', points: { a: 25, b: 0, c: 0, d: 0 } } })
+    state = reducer(state, { type: 'set-tie-winner', gameId: id, playerId: 'c' })
+    expect(state.games[0].tieWinnerId).toBe('c')
+    state = reducer(state, { type: 'undo-round', gameId: id })
+    expect(state.games[0].tieWinnerId).toBeUndefined()
+  })
+
   it('deletes a game and clears the active id', () => {
     let state = reducer(empty, { type: 'new-game', players, ruleSet: huisregels })
     state = reducer(state, { type: 'delete-game', gameId: state.games[0].id })

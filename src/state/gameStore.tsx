@@ -13,6 +13,7 @@ export type StoreAction =
   | { type: 'close-game' }
   | { type: 'add-round'; gameId: string; round: Round }
   | { type: 'undo-round'; gameId: string }
+  | { type: 'set-tie-winner'; gameId: string; playerId: string }
   | { type: 'delete-game'; gameId: string }
 
 export function reducer(state: StoreState, action: StoreAction): StoreState {
@@ -42,7 +43,14 @@ export function reducer(state: StoreState, action: StoreAction): StoreState {
       return {
         ...state,
         games: state.games.map((g) =>
-          g.id === action.gameId ? { ...g, rounds: g.rounds.slice(0, -1) } : g,
+          g.id === action.gameId ? { ...g, rounds: g.rounds.slice(0, -1), tieWinnerId: undefined } : g,
+        ),
+      }
+    case 'set-tie-winner':
+      return {
+        ...state,
+        games: state.games.map((g) =>
+          g.id === action.gameId ? { ...g, tieWinnerId: action.playerId } : g,
         ),
       }
     case 'delete-game':

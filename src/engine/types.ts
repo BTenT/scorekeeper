@@ -57,6 +57,11 @@ export interface GameState {
   /** 'down' once any player has reached turnAt: from then on everyone counts down. */
   phase: Phase
   winnerId: PlayerId | null
+  /**
+   * Set when several players dropped below 0 in the same round and no choice
+   * has been recorded yet: the app must ask who declared out ("uitgemeld") first.
+   */
+  pendingTie: PlayerId[] | null
 }
 
 export interface Game {
@@ -65,6 +70,8 @@ export interface Game {
   players: Player[]
   ruleSet: RuleSet
   rounds: Round[]
+  /** Chosen winner when several players dropped below 0 in the same round. */
+  tieWinnerId?: PlayerId
 }
 
 export interface PaymentLine {
