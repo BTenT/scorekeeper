@@ -19,7 +19,9 @@ export function GameScreen({ game, onClose, onRematch }: Props) {
   const history = stateHistory(game)
   const winner = game.players.find((p) => p.id === state.winnerId) ?? null
   const lowest = Math.min(...state.standings.map((s) => s.score))
-  const highlightLowest = !winner && game.rounds.length > 0
+  const highest = Math.max(...state.standings.map((s) => s.score))
+  // No highlights before the first round or while everyone is tied.
+  const highlightActive = !winner && game.rounds.length > 0 && lowest !== highest
 
   function addRound(round: Round) {
     dispatch({ type: 'add-round', gameId: game.id, round })
@@ -54,7 +56,8 @@ export function GameScreen({ game, onClose, onRematch }: Props) {
         {state.standings.map((s) => {
           const player = game.players.find((p) => p.id === s.playerId)!
           const isWinner = s.playerId === state.winnerId
-          const isLowest = highlightLowest && s.score === lowest
+          const isLowest = highlightActive && s.score === lowest
+          const isHighest = highlightActive && s.score === highest
           return (
             <div
               key={s.playerId}
@@ -63,7 +66,9 @@ export function GameScreen({ game, onClose, onRematch }: Props) {
                   ? 'bg-amber-100 ring-2 ring-amber-400 dark:bg-amber-950 dark:ring-amber-500'
                   : isLowest
                     ? 'bg-green-50 ring-2 ring-green-500 dark:bg-green-950 dark:ring-green-500'
-                    : 'bg-white dark:bg-stone-800'
+                    : isHighest
+                      ? 'bg-orange-50 ring-2 ring-orange-500 dark:bg-orange-950 dark:ring-orange-500'
+                      : 'bg-white dark:bg-stone-800'
               }`}
             >
               <div className="flex items-center justify-between gap-1">
@@ -71,6 +76,11 @@ export function GameScreen({ game, onClose, onRematch }: Props) {
                 {isLowest && (
                   <span className="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700 dark:bg-green-900 dark:text-green-300">
                     {t.lowest}
+                  </span>
+                )}
+                {isHighest && (
+                  <span className="shrink-0 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-bold text-orange-700 dark:bg-orange-900 dark:text-orange-300">
+                    {t.highest}
                   </span>
                 )}
               </div>

@@ -36,6 +36,7 @@ export const t = {
   returnPhase: 'retour',
   returnBanner: 'Retourspel — punten tellen af',
   lowest: 'laagste',
+  highest: 'hoogste',
   tieTitle: 'Meerdere spelers onder de 0!',
   tieQuestion: 'Wie heeft zich als eerste uitgemeld?',
   total: 'Totaal',
