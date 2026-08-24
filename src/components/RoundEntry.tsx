@@ -87,7 +87,11 @@ export function RoundEntry({ game, roundNumber, onSave, onCancel }: Props) {
                 inputMode="numeric"
                 pattern="[0-9]*"
                 value={draft[p.id]}
-                onFocus={(e) => e.target.select()}
+                onFocus={(e) => {
+                  // A 0 clears itself on focus so typing can start right away.
+                  if (draft[p.id] === '0') setDraft((d) => ({ ...d, [p.id]: '' }))
+                  else e.target.select()
+                }}
                 onChange={(e) => typePlayerPoints(p.id, e.target.value)}
                 onBlur={() => {
                   if (draft[p.id] === '') setDraft((d) => ({ ...d, [p.id]: '0' }))
