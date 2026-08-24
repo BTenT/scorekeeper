@@ -21,6 +21,9 @@ function points(p: Record<string, number>): Round {
   return { kind: 'points', points: p }
 }
 
+// 4 rounds that bring player a to exactly 100 and start the return game
+const aTo100: Round[] = Array.from({ length: 4 }, () => points({ a: 25, b: 0, c: 0, d: 0 }))
+
 describe('validation', () => {
   it('accepts a round summing to 25', () => {
     expect(validateRound(points({ a: 10, b: 8, c: 7, d: 0 }), huisregels, ids).valid).toBe(true)
@@ -51,9 +54,10 @@ describe('validation', () => {
 })
 
 describe('scoring', () => {
-  it('adds points in the up phase', () => {
+  it('adds points while nobody has reached 100', () => {
     const state = computeState(game([points({ a: 10, b: 8, c: 7, d: 0 })]))
     expect(state.standings.map((s) => s.score)).toEqual([10, 8, 7, 0])
+    expect(state.phase).toBe('up')
     expect(state.winnerId).toBeNull()
   })
 
@@ -67,56 +71,62 @@ describe('scoring', () => {
     expect(state.standings.map((s) => s.score)).toEqual([0, 25, 25, 25])
   })
 
-  it('a negative score while still in the up phase does not win', () => {
+  it('a negative score before the return game does not win', () => {
     const state = computeState(game([{ kind: 'pit', playerId: 'a', choice: 'self' }]))
     expect(state.winnerId).toBeNull()
-    expect(state.standings[0].phase).toBe('up')
+    expect(state.phase).toBe('up')
   })
 
-  it('passing 100 keeps the overshoot and flips to the return game', () => {
+  it('passing 100 keeps the overshoot and starts the return game for everyone', () => {
     const rounds: Round[] = [
-      points({ a: 25, b: 0, c: 0, d: 0 }),
-      points({ a: 25, b: 0, c: 0, d: 0 }),
-      points({ a: 25, b: 0, c: 0, d: 0 }),
+      ...Array.from({ length: 3 }, () => points({ a: 25, b: 0, c: 0, d: 0 })), // a: 75
       points({ a: 15, b: 10, c: 0, d: 0 }), // a: 90
-      points({ a: 17, b: 8, c: 0, d: 0 }), // a: 107, turns
+      points({ a: 17, b: 8, c: 0, d: 0 }), // a: 107, return game starts
     ]
     const state = computeState(game(rounds))
-    const a = state.standings[0]
-    expect(a.score).toBe(107)
-    expect(a.phase).toBe('down')
+    expect(state.standings[0].score).toBe(107)
+    expect(state.phase).toBe('down')
   })
 
-  it('points count down in the return game and first below 0 wins', () => {
-    const up: Round[] = Array.from({ length: 4 }, () => points({ a: 25, b: 0, c: 0, d: 0 })) // a: 100, down
-    const down: Round[] = Array.from({ length: 4 }, () => points({ a: 25, b: 0, c: 0, d: 0 })) // 100 - 100 = 0
-    const final: Round = points({ a: 10, b: 15, c: 0, d: 0 }) // a: -10 -> wins
-    const state = computeState(game([...up, ...down, final]))
-    expect(state.standings[0].score).toBe(-10)
-    expect(state.winnerId).toBe('a')
+  it('after someone reached 100, points count down for ALL players', () => {
+    const state = computeState(game([...aTo100, points({ a: 0, b: 20, c: 5, d: 0 })]))
+    expect(state.standings.map((s) => s.score)).toEqual([100, -20, -5, 0])
   })
 
-  it('exactly 0 in the return game does not win yet', () => {
-    const rounds: Round[] = Array.from({ length: 8 }, () => points({ a: 25, b: 0, c: 0, d: 0 }))
-    const state = computeState(game(rounds)) // 100 up (turns), then -100 back to exactly 0
+  it('a low player dropping below 0 in the return game wins', () => {
+    const state = computeState(game([...aTo100, points({ a: 0, b: 0, c: 10, d: 15 })]))
+    // c: -10, d: -15 -> lowest score wins
+    expect(state.winnerId).toBe('d')
+  })
+
+  it('a player who is already negative when the return game starts wins immediately', () => {
+    const rounds: Round[] = [{ kind: 'pit', playerId: 'b', choice: 'self' }, ...aTo100]
+    const state = computeState(game(rounds))
+    expect(state.standings[1].score).toBe(-25)
+    expect(state.winnerId).toBe('b')
+  })
+
+  it('exactly 0 in the return game does not win', () => {
+    const rounds: Round[] = [...aTo100, ...Array.from({ length: 4 }, () => points({ a: 25, b: 0, c: 0, d: 0 }))]
+    const state = computeState(game(rounds)) // a: 100 up, then -100 back to exactly 0
     expect(state.standings[0].score).toBe(0)
+    expect(state.phase).toBe('down')
     expect(state.winnerId).toBeNull()
   })
 
-  it('pit self in the return game subtracts 25 and can win the game', () => {
-    const up: Round[] = Array.from({ length: 4 }, () => points({ a: 25, b: 0, c: 0, d: 0 })) // a: 100, down
+  it('pit self in the return game still subtracts 25 and can win', () => {
     const down: Round[] = Array.from({ length: 3 }, () => points({ a: 25, b: 0, c: 0, d: 0 })) // a: 25
-    const pit: Round = { kind: 'pit', playerId: 'a', choice: 'self' } // a: 0... below? 25-25=0 no win
-    const pit2: Round = { kind: 'pit', playerId: 'a', choice: 'self' } // a: -25 wins
-    const state = computeState(game([...up, ...down, pit, pit2]))
+    const pit: Round = { kind: 'pit', playerId: 'a', choice: 'self' } // a: 0, no win
+    const pit2: Round = { kind: 'pit', playerId: 'a', choice: 'self' } // a: -25, wins
+    const state = computeState(game([...aTo100, ...down, pit, pit2]))
     expect(state.standings[0].score).toBe(-25)
     expect(state.winnerId).toBe('a')
   })
 
   it('rounds after the winning round are ignored', () => {
     const rounds: Round[] = [
-      ...Array.from({ length: 5 }, () => points({ a: 25, b: 0, c: 0, d: 0 })), // a: 125
-      ...Array.from({ length: 6 }, () => points({ a: 25, b: 0, c: 0, d: 0 })), // a: -25, wins at round 11
+      ...aTo100,
+      ...Array.from({ length: 5 }, () => points({ a: 25, b: 0, c: 0, d: 0 })), // a: -25, wins
       points({ a: 0, b: 25, c: 0, d: 0 }),
     ]
     const state = computeState(game(rounds))
@@ -142,26 +152,28 @@ describe('scoring', () => {
 describe('payment', () => {
   it('each loser pays 0.50 + 0.05 x own score to the winner', () => {
     const rounds: Round[] = [
-      ...Array.from({ length: 5 }, () => points({ a: 20, b: 5, c: 0, d: 0 })), // a: 100 -> down, b: 25
-      ...Array.from({ length: 5 }, () => points({ a: 21, b: 0, c: 4, d: 0 })), // a: -5 wins, b: 25, c: 20, d: 0
+      points({ a: 0, b: 25, c: 0, d: 0 }), // b: 25
+      ...aTo100, // a: 100, return game starts
+      ...Array.from({ length: 5 }, () => points({ a: 25, b: 0, c: 0, d: 0 })), // a: -25, wins
     ]
     const state = computeState(game(rounds))
     expect(state.winnerId).toBe('a')
     const lines = computePayments(state, huisregels)
     expect(lines).toEqual([
       { from: 'b', to: 'a', amount: 0.5 + 0.05 * 25 }, // 1.75
-      { from: 'c', to: 'a', amount: 0.5 + 0.05 * 20 }, // 1.50
+      { from: 'c', to: 'a', amount: 0.5 },
       { from: 'd', to: 'a', amount: 0.5 },
     ])
-    expect(totalForWinner(lines)).toBe(3.75)
+    expect(totalForWinner(lines)).toBe(2.75)
   })
 
   it('a loser with a negative score pays only the game fee', () => {
     const state = {
       winnerId: 'a',
+      phase: 'down' as const,
       standings: [
-        { playerId: 'a', score: -5, phase: 'down' as const },
-        { playerId: 'b', score: -10, phase: 'up' as const },
+        { playerId: 'a', score: -15 },
+        { playerId: 'b', score: -10 },
       ],
     }
     expect(computePayments(state, huisregels)).toEqual([{ from: 'b', to: 'a', amount: 0.5 }])

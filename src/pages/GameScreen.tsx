@@ -40,6 +40,13 @@ export function GameScreen({ game, onClose, onRematch }: Props) {
         </button>
       </header>
 
+      {/* Return game banner */}
+      {state.phase === 'down' && !winner && (
+        <div className="mb-3 rounded-2xl bg-red-100 px-4 py-2 text-center text-sm font-bold text-red-700 dark:bg-red-950 dark:text-red-400">
+          ↓ {t.returnBanner}
+        </div>
+      )}
+
       {/* Standings */}
       <div className="mb-4 grid grid-cols-2 gap-2">
         {state.standings.map((s) => {
@@ -52,11 +59,6 @@ export function GameScreen({ game, onClose, onRematch }: Props) {
             >
               <div className="flex items-center justify-between gap-1">
                 <span className="truncate font-semibold">{isWinner ? '🏆 ' : ''}{player.name}</span>
-                {s.phase === 'down' && !isWinner && (
-                  <span className="shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700 dark:bg-red-950 dark:text-red-400">
-                    ↓ {t.returnPhase}
-                  </span>
-                )}
               </div>
               <div className="text-3xl font-black tabular-nums">{s.score}</div>
             </div>

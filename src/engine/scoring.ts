@@ -1,8 +1,8 @@
-import type { Game, GameState, PlayerId, PlayerStanding, Round, RuleSet } from './types'
+import type { Game, GameState, Phase, PlayerId, Round, RuleSet } from './types'
 
 /**
  * Direct score delta per player for a round.
- * - Points rounds return points taken; the caller inverts them for return-phase players.
+ * - Points rounds return points taken; the caller inverts them in the return game.
  * - Pit deltas (-25 self / +25 others) are absolute score adjustments, never inverted.
  */
 export function roundDeltas(round: Round, ruleSet: RuleSet, playerIds: PlayerId[]): Record<PlayerId, number> {
@@ -19,41 +19,38 @@ export function roundDeltas(round: Round, ruleSet: RuleSet, playerIds: PlayerId[
   return deltas
 }
 
-function applyDelta(standing: PlayerStanding, delta: number, invertWhenDown: boolean, ruleSet: RuleSet): PlayerStanding {
-  // In the return game every point taken counts down instead of up.
-  const invert = invertWhenDown && standing.phase === 'down'
-  const score = standing.score + (invert ? -delta : delta)
-  let phase = standing.phase
-  if (phase === 'up' && score >= ruleSet.turnAt) {
-    // Player lands on the overshoot value (e.g. 90 + 17 = 107) and turns around.
-    phase = 'down'
-  }
-  return { ...standing, score, phase }
-}
-
 /** Replay all rounds from scratch; stops at the first winner. */
 export function computeState(game: Game): GameState {
-  let standings: PlayerStanding[] = game.players.map((p) => ({
-    playerId: p.id,
-    score: 0,
-    phase: 'up',
-  }))
+  let standings = game.players.map((p) => ({ playerId: p.id, score: 0 }))
+  let phase: Phase = 'up'
   let winnerId: PlayerId | null = null
 
   for (const round of game.rounds) {
     if (winnerId) break
     const deltas = roundDeltas(round, game.ruleSet, game.players.map((p) => p.id))
-    const invertWhenDown = round.kind === 'points'
-    standings = standings.map((s) => applyDelta(s, deltas[s.playerId], invertWhenDown, game.ruleSet))
-    // Only a player already in the return game can win by dropping below 0.
-    const winners = standings.filter((s) => s.phase === 'down' && s.score < game.ruleSet.winBelow)
-    if (winners.length > 0) {
-      // If several drop below 0 in the same round, the lowest score wins.
-      winnerId = winners.reduce((a, b) => (b.score < a.score ? b : a)).playerId
+    // In the return game every point taken counts down; pit deltas always apply directly.
+    const invert = phase === 'down' && round.kind === 'points'
+    standings = standings.map((s) => ({
+      ...s,
+      score: s.score + (invert ? -deltas[s.playerId] : deltas[s.playerId]),
+    }))
+    // Once any player has been at turnAt, ALL players count down from the next round on.
+    // The trigger keeps the overshoot value (e.g. 90 + 17 = 107).
+    if (phase === 'up' && standings.some((s) => s.score >= game.ruleSet.turnAt)) {
+      phase = 'down'
+    }
+    // During the return game the first player below 0 wins — including players
+    // who were already negative (e.g. from a pit) when the return game started.
+    if (phase === 'down') {
+      const winners = standings.filter((s) => s.score < game.ruleSet.winBelow)
+      if (winners.length > 0) {
+        // If several are below 0 at once, the lowest score wins.
+        winnerId = winners.reduce((a, b) => (b.score < a.score ? b : a)).playerId
+      }
     }
   }
 
-  return { standings, winnerId }
+  return { standings, phase, winnerId }
 }
 
 /** Standings after each round, for the score history table. */

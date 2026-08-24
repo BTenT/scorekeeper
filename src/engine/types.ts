@@ -50,11 +50,12 @@ export type Phase = 'up' | 'down'
 export interface PlayerStanding {
   playerId: PlayerId
   score: number
-  phase: Phase
 }
 
 export interface GameState {
   standings: PlayerStanding[]
+  /** 'down' once any player has reached turnAt: from then on everyone counts down. */
+  phase: Phase
   winnerId: PlayerId | null
 }
 

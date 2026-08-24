@@ -34,5 +34,6 @@ export const t = {
   pays: (from: string, amount: string, to: string) => `${from} betaalt ${amount} aan ${to}`,
   receivesTotal: (name: string, amount: string) => `${name} ontvangt ${amount}`,
   returnPhase: 'retour',
+  returnBanner: 'Retourspel — punten tellen af',
   total: 'Totaal',
 }
