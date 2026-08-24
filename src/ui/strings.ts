@@ -32,6 +32,7 @@ export const t = {
   winner: (name: string) => `${name} wint!`,
   payments: 'Afrekening',
   pays: (from: string, amount: string, to: string) => `${from} betaalt ${amount} aan ${to}`,
+  paymentsNote: 'Exclusief verrekening van eventuele pit-potjes.',
   receivesTotal: (name: string, amount: string) => `${name} ontvangt ${amount}`,
   returnPhase: 'retour',
   returnBanner: 'Retourspel — punten tellen af',

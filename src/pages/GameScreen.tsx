@@ -109,6 +109,7 @@ export function GameScreen({ game, onClose, onRematch }: Props) {
                 <span>{t.receivesTotal(winner.name, formatEuro(totalForWinner(computePayments(state, game.ruleSet))))}</span>
               </li>
             </ul>
+            <p className="mt-2 text-xs text-stone-400 dark:text-stone-500">{t.paymentsNote}</p>
             <button
               onClick={() => onRematch(game.players)}
               className="mt-4 w-full rounded-2xl bg-red-700 px-4 py-3 font-bold text-white active:bg-red-800 dark:bg-red-400 dark:text-red-950 dark:active:bg-red-300"
