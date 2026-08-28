@@ -8,12 +8,13 @@ export interface StoreState {
 }
 
 export type StoreAction =
-  | { type: 'new-game'; players: Player[]; ruleSet: RuleSet }
+  | { type: 'new-game'; players: Player[]; ruleSet: RuleSet; firstDealerId?: string }
   | { type: 'open-game'; gameId: string }
   | { type: 'close-game' }
   | { type: 'add-round'; gameId: string; round: Round }
   | { type: 'undo-round'; gameId: string }
   | { type: 'set-tie-winner'; gameId: string; playerId: string }
+  | { type: 'set-draft-roem'; gameId: string; roem: Record<string, number> }
   | { type: 'delete-game'; gameId: string }
 
 export function reducer(state: StoreState, action: StoreAction): StoreState {
@@ -25,6 +26,7 @@ export function reducer(state: StoreState, action: StoreAction): StoreState {
         players: action.players,
         ruleSet: action.ruleSet,
         rounds: [],
+        firstDealerId: action.firstDealerId,
       }
       return { games: [game, ...state.games], activeGameId: game.id }
     }
@@ -36,7 +38,8 @@ export function reducer(state: StoreState, action: StoreAction): StoreState {
       return {
         ...state,
         games: state.games.map((g) =>
-          g.id === action.gameId ? { ...g, rounds: [...g.rounds, action.round] } : g,
+          // Saving a round also settles the roem tallied during that potje.
+          g.id === action.gameId ? { ...g, rounds: [...g.rounds, action.round], draftRoem: undefined } : g,
         ),
       }
     case 'undo-round':
@@ -44,6 +47,13 @@ export function reducer(state: StoreState, action: StoreAction): StoreState {
         ...state,
         games: state.games.map((g) =>
           g.id === action.gameId ? { ...g, rounds: g.rounds.slice(0, -1), tieWinnerId: undefined } : g,
+        ),
+      }
+    case 'set-draft-roem':
+      return {
+        ...state,
+        games: state.games.map((g) =>
+          g.id === action.gameId ? { ...g, draftRoem: action.roem } : g,
         ),
       }
     case 'set-tie-winner':

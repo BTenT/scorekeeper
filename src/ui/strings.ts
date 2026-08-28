@@ -1,6 +1,6 @@
 export const t = {
   appName: 'Scorekeeper',
-  subtitle: 'Hartenjagen',
+  subtitle: 'Hartenjagen & klaverjassen',
   newGame: 'Nieuw spel',
   newGameSamePlayers: 'Nieuw spel, zelfde spelers',
   inProgress: 'Bezig',
@@ -41,4 +41,29 @@ export const t = {
   tieTitle: 'Meerdere spelers onder de 0!',
   tieQuestion: 'Wie heeft zich als eerste uitgemeld?',
   total: 'Totaal',
+  // Klaverjassen
+  gameTypeLabel: 'Spel',
+  hartenjagen: 'Hartenjagen',
+  klaverjassen: 'Klaverjassen',
+  teams: 'Teams',
+  teamWij: 'Wij',
+  teamZij: 'Zij',
+  variantLabel: 'Telling',
+  firstDealer: 'Wie deelt eerst?',
+  deals: (name: string) => `${name} deelt`,
+  potje: 'Potje',
+  enterPotje: 'Potje invoeren',
+  trumpQuestion: 'Wie maakte troef?',
+  roem: 'Roem',
+  resetRoem: 'wissen',
+  points: 'Punten',
+  klaverjasRemaining: (left: number) => (left === 0 ? 'Samen 162 ✓' : left > 0 ? `Nog ${left} tot 162` : `${-left} te veel!`),
+  nat: 'nat',
+  natWarning: (trump: string, other: string) => `${trump} gaat nat — alle punten en roem naar ${other}`,
+  pitWarning: (name: string, bonus: number) => `Pit voor ${name}: alle punten + ${bonus}`,
+  leading: 'aan kop',
+  teamWins: (name: string) => {
+    const lower = name.trim().toLowerCase()
+    return lower === 'wij' || lower === 'zij' ? `${name.trim()} winnen!` : `${name} wint!`
+  },
 }

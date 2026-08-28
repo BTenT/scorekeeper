@@ -20,7 +20,29 @@ export interface PitRound {
   choice: PitChoice
 }
 
-export type Round = PointsRound | PitRound
+/**
+ * One klaverjas deal ("potje"). All values are on the raw 162-point scale,
+ * regardless of the scoring variant; the 'afgerond' variant converts on replay.
+ */
+export interface KlaverjasRound {
+  kind: 'klaverjas'
+  /** team that made trump; goes "nat" when it scores no more than the opponent */
+  trumpTeamId: PlayerId
+  /** card points per team, summing to pointsPerPotje (162) */
+  points: Record<PlayerId, number>
+  /**
+   * Team whose points were counted (typed) first. In the 'afgerond' variant its
+   * rounding takes precedence and the other team gets the remainder, so the
+   * points of a potje always sum to 16. Defaults to the trump team.
+   */
+  countedTeamId?: PlayerId
+  /** roem per team, raw (20/50/100…) */
+  roem: Record<PlayerId, number>
+  /** team that took every trick, if any (earns the pit bonus) */
+  pitTeamId?: PlayerId
+}
+
+export type Round = PointsRound | PitRound | KlaverjasRound
 
 export interface PaymentRules {
   /** euro per point of the loser's own final score */
@@ -30,9 +52,28 @@ export interface PaymentRules {
   scheme: 'winner-takes-all-own-score'
 }
 
+export type GameType = 'hartenjagen' | 'klaverjassen'
+
+export type KlaverjasVariant = 'volledig' | 'afgerond'
+
+export interface KlaverjasRules {
+  /** 'volledig' keeps raw scores (to 1600); 'afgerond' rounds to tens (82 → 8, to 160) */
+  variant: KlaverjasVariant
+  /** first team at or above this (in the variant's own units) wins */
+  target: number
+  /** card points dealt per potje, raw scale (162) */
+  pointsPerPotje: number
+  /** raw bonus for taking every trick (100; shows as 10 in 'afgerond') */
+  pitBonus: number
+}
+
 export interface RuleSet {
   id: string
   name: string
+  /** absent on games saved before klaverjassen existed → hartenjagen */
+  gameType?: GameType
+  /** present iff gameType === 'klaverjassen' */
+  klaverjas?: KlaverjasRules
   /** total points distributed in a normal round */
   pointsPerRound: number
   /** informational card values, editable per game */
@@ -72,6 +113,10 @@ export interface Game {
   rounds: Round[]
   /** Chosen winner when several players dropped below 0 in the same round. */
   tieWinnerId?: PlayerId
+  /** Klaverjassen: team that deals the first potje; dealing alternates per potje. */
+  firstDealerId?: PlayerId
+  /** Klaverjassen: roem tallied during the current potje, raw, cleared when the potje is saved. */
+  draftRoem?: Record<PlayerId, number>
 }
 
 export interface PaymentLine {

@@ -1,6 +1,6 @@
 # Scorekeeper — guidance for future iterations
 
-Mobile-first PWA for tracking Hartenjagen scores. **Read README.md first**: it documents the house rules and product decisions in detail. Those rules were chosen deliberately with the owner — never change game semantics (points per round, pit behavior, global return game, tie handling, payment formula) without an explicit request.
+Mobile-first PWA for tracking Hartenjagen and Klaverjassen scores. **Read README.md first**: it documents the house rules and product decisions in detail. Those rules were chosen deliberately with the owner — never change game semantics (points per round, pit behavior, global return game, tie handling, payment formula; for klaverjassen: the 162 raw scale, 'afgerond' rounding where the first-counted team rounds and the other gets 16 minus that, nat on ≤ opponent incl. roem, pit bonus, no payment scheme) without an explicit request. Klaverjas rounds store everything raw (162 scale); games saved before the klaverjassen feature have no `ruleSet.gameType` and must keep working as hartenjagen.
 
 ## Architecture decisions (keep these)
 
