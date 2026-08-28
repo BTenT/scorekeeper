@@ -1,11 +1,17 @@
 import type { Game, GameState, Phase, PlayerId, Round, RuleSet } from './types'
+import { computeKlaverjasState, isKlaverjas, potjeResult } from './klaverjas'
 
 /**
  * Direct score delta per player for a round.
  * - Points rounds return points taken; the caller inverts them in the return game.
  * - Pit deltas (-25 self / +25 others) are absolute score adjustments, never inverted.
+ * - Klaverjas potjes return the settled delta in the variant's units (nat included).
  */
 export function roundDeltas(round: Round, ruleSet: RuleSet, playerIds: PlayerId[]): Record<PlayerId, number> {
+  if (round.kind === 'klaverjas') {
+    const deltas = potjeResult(round, ruleSet.klaverjas!, playerIds).deltas
+    return Object.fromEntries(playerIds.map((id) => [id, deltas[id] ?? 0]))
+  }
   const deltas: Record<PlayerId, number> = {}
   for (const id of playerIds) {
     if (round.kind === 'points') {
@@ -21,6 +27,7 @@ export function roundDeltas(round: Round, ruleSet: RuleSet, playerIds: PlayerId[
 
 /** Replay all rounds from scratch; stops at the first winner. */
 export function computeState(game: Game): GameState {
+  if (isKlaverjas(game.ruleSet)) return computeKlaverjasState(game)
   let standings = game.players.map((p) => ({ playerId: p.id, score: 0 }))
   let phase: Phase = 'up'
   let winnerId: PlayerId | null = null

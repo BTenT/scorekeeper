@@ -1,8 +1,8 @@
-# Scorekeeper — Hartenjagen
+# Scorekeeper — Hartenjagen & klaverjassen
 
-Mobiele web-app (PWA) om scores bij te houden tijdens hartenjagen. Eén persoon houdt de score bij op z'n telefoon; geen login, geen backend — alles staat lokaal op het apparaat.
+Mobiele web-app (PWA) om scores bij te houden tijdens hartenjagen en klaverjassen. Eén persoon houdt de score bij op z'n telefoon; geen login, geen backend — alles staat lokaal op het apparaat.
 
-## Spelregels (huisregels, standaard)
+## Spelregels hartenjagen (huisregels, standaard)
 
 Deze regels zijn bewust zo gekozen en moeten bij een volgende iteratie **niet** stilzwijgend veranderen:
 
@@ -30,6 +30,26 @@ Deze regels zijn bewust zo gekozen en moeten bij een volgende iteratie **niet** 
 - **Winner takes all**: iedere verliezer betaalt de winnaar **€0,50 (spel) + €0,05 per punt** van de eigen eindscore (negatieve score = alleen de €0,50).
 - Onder de afrekening staat de opmerking dat dit **exclusief verrekening van eventuele pit-potjes** is; de app houdt pit-potjes zelf niet bij.
 
+## Spelregels klaverjassen
+
+Bij de setup kies je **Klaverjassen**: 2 teams ("Wij"/"Zij" standaard, namen aanpasbaar) en wie er als eerste deelt. Geen uitbetaalschema — de afrekening blijft bij klaverjassen verborgen.
+
+### Twee tellingen
+- **Volledig tot 1600**: ruwe scores, 162 kaartpunten + roem per potje. Eerste team op 1600 of hoger wint.
+- **Afgerond tot 160**: je telt de kaarten gewoon tot 162, maar de score wordt afgerond op tientallen: 82 punten → 8, 97 → 10. **De eerste afronding krijgt voorrang**: het team waarvan je de punten intypt wordt afgerond, het andere team krijgt 16 min dat — een potje telt dus altijd op tot 16 (97–65 met 97 getypt → 10–6; met 65 getypt → 9–7). De "rest"-knop telt niet als invullen; zonder invoer (bijv. pit) geldt de troefmaker als geteld. Roem gaat er los overheen (20 → 2). Eerste team op 160 wint.
+- Invoer is bij beide tellingen op de ruwe 162-schaal; de app rekent zelf om.
+- Komen beide teams in hetzelfde potje over de grens, dan wint de hoogste; bij exact gelijke stand wordt doorgespeeld.
+
+### Delen en nat gaan
+- De app houdt bij **wie er deelt** (wisselt elk potje); bij invoer kies je welk team troef maakte (standaard het niet-delende team).
+- **Nat**: het troefmakende team heeft inclusief roem **niet méér** punten dan de tegenstander (81–81 is dus ook nat). Dan gaan **alle punten plus alle roem** (en een eventuele pit-bonus) naar de tegenstander.
+
+### Roem
+- Roem kan **tijdens het potje** los worden bijgehouden (paneel met +20/+50/+100 per team op het spelscherm) en wordt bij het opslaan van het potje verrekend; het vooringevulde bedrag is in het invoerscherm nog aan te passen.
+
+### Pit
+- Een team dat alle slagen haalt krijgt alle punten **+100** (volledige telling) oftewel **+10** (afgeronde telling), bovenop de roem.
+
 ## Bediening / UI-keuzes
 
 - UI-taal is **Nederlands**; alle teksten staan in `src/ui/strings.ts`.
@@ -43,7 +63,7 @@ Deze regels zijn bewust zo gekozen en moeten bij een volgende iteratie **niet** 
 
 - **Vite + React + TypeScript + Tailwind CSS 4 + vite-plugin-pwa** (installeerbaar, offline). Geen backend, geen router-library.
 - Opslag: `localStorage` onder de sleutel `scorekeeper.games.v1`; meerdere spellen naast elkaar (hervatten, historie, verwijderen).
-- **Rondes zijn de bron van waarheid**: scores worden altijd herberekend door alle rondes opnieuw af te spelen (`computeState`). Daardoor is undo triviaal — maar een regelwijziging herinterpreteert ook oude opgeslagen spellen.
+- **Rondes zijn de bron van waarheid**: scores worden altijd herberekend door alle rondes opnieuw af te spelen (`computeState`; klaverjassen via `src/engine/klaverjas.ts`). Daardoor is undo triviaal — maar een regelwijziging herinterpreteert ook oude opgeslagen spellen.
 - Structuur:
   - `src/engine/` — pure, volledig geteste spellogica (types, rules, scoring, validation, payment). Geen React.
   - `src/state/` — reducer + localStorage-persistentie (`gameStore.tsx`, `storage.ts`).

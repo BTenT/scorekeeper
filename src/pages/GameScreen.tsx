@@ -1,27 +1,37 @@
 import { useState } from 'react'
-import type { Game, Player, Round } from '../engine/types'
+import type { Game, GameType, Player, Round } from '../engine/types'
 import { computeState, roundDeltas, stateHistory } from '../engine/scoring'
 import { computePayments, formatEuro, totalForWinner } from '../engine/payment'
+import { dealerIdForRound, isKlaverjas, potjeResult } from '../engine/klaverjas'
 import { useGameStore } from '../state/gameStore'
 import { RoundEntry } from '../components/RoundEntry'
+import { KlaverjasEntry } from '../components/KlaverjasEntry'
 import { t } from '../ui/strings'
 
 interface Props {
   game: Game
   onClose: () => void
-  onRematch: (players: Player[]) => void
+  onRematch: (players: Player[], gameType: GameType) => void
 }
+
+const ROEM_STEPS = [20, 50, 100]
 
 export function GameScreen({ game, onClose, onRematch }: Props) {
   const { dispatch } = useGameStore()
   const [entering, setEntering] = useState(false)
+  const klaverjas = isKlaverjas(game.ruleSet) ? game.ruleSet.klaverjas! : null
   const state = computeState(game)
   const history = stateHistory(game)
   const winner = game.players.find((p) => p.id === state.winnerId) ?? null
   const lowest = Math.min(...state.standings.map((s) => s.score))
   const highest = Math.max(...state.standings.map((s) => s.score))
   // No highlights before the first round or while everyone is tied.
+  // Klaverjassen: high is good, so only the leading team gets a (green) highlight.
   const highlightActive = !winner && game.rounds.length > 0 && lowest !== highest
+  const dealer = klaverjas ? game.players.find((p) => p.id === dealerIdForRound(game, game.rounds.length))! : null
+  const draftRoem: Record<string, number> = Object.fromEntries(
+    game.players.map((p) => [p.id, game.draftRoem?.[p.id] ?? 0]),
+  )
 
   function addRound(round: Round) {
     dispatch({ type: 'add-round', gameId: game.id, round })
@@ -56,15 +66,16 @@ export function GameScreen({ game, onClose, onRematch }: Props) {
         {state.standings.map((s) => {
           const player = game.players.find((p) => p.id === s.playerId)!
           const isWinner = s.playerId === state.winnerId
-          const isLowest = highlightActive && s.score === lowest
-          const isHighest = highlightActive && s.score === highest
+          const isLowest = highlightActive && !klaverjas && s.score === lowest
+          const isHighest = highlightActive && !klaverjas && s.score === highest
+          const isLeading = highlightActive && !!klaverjas && s.score === highest
           return (
             <div
               key={s.playerId}
               className={`rounded-2xl p-3 shadow-sm ${
                 isWinner
                   ? 'bg-amber-100 ring-2 ring-amber-400 dark:bg-amber-950 dark:ring-amber-500'
-                  : isLowest
+                  : isLowest || isLeading
                     ? 'bg-green-50 ring-2 ring-green-500 dark:bg-green-950 dark:ring-green-500'
                     : isHighest
                       ? 'bg-orange-50 ring-2 ring-orange-500 dark:bg-orange-950 dark:ring-orange-500'
@@ -73,9 +84,9 @@ export function GameScreen({ game, onClose, onRematch }: Props) {
             >
               <div className="flex items-center justify-between gap-1">
                 <span className="truncate font-semibold">{isWinner ? '🏆 ' : ''}{player.name}</span>
-                {isLowest && (
+                {(isLowest || isLeading) && (
                   <span className="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700 dark:bg-green-900 dark:text-green-300">
-                    {t.lowest}
+                    {isLeading ? t.leading : t.lowest}
                   </span>
                 )}
                 {isHighest && (
@@ -84,7 +95,10 @@ export function GameScreen({ game, onClose, onRematch }: Props) {
                   </span>
                 )}
               </div>
-              <div className="text-3xl font-black tabular-nums">{s.score}</div>
+              <div className="text-3xl font-black tabular-nums">
+                {s.score}
+                {klaverjas && <span className="text-sm font-semibold text-stone-400 dark:text-stone-500"> / {klaverjas.target}</span>}
+              </div>
             </div>
           )
         })}
@@ -94,24 +108,31 @@ export function GameScreen({ game, onClose, onRematch }: Props) {
       <div className="min-h-0 flex-1 overflow-y-auto">
         {winner && (
           <div className="mb-4 rounded-2xl bg-white p-4 shadow-sm dark:bg-stone-800">
-            <h2 className="mb-1 text-xl font-black text-amber-600 dark:text-amber-400">🏆 {t.winner(winner.name)}</h2>
-            <h3 className="mb-2 font-semibold text-stone-600 dark:text-stone-300">{t.payments}</h3>
-            <ul className="space-y-1">
-              {computePayments(state, game.ruleSet).map((line) => {
-                const from = game.players.find((p) => p.id === line.from)!
-                return (
-                  <li key={line.from} className="flex justify-between text-stone-700 dark:text-stone-200">
-                    <span>{t.pays(from.name, formatEuro(line.amount), winner.name)}</span>
+            <h2 className="mb-1 text-xl font-black text-amber-600 dark:text-amber-400">
+              🏆 {klaverjas ? t.teamWins(winner.name) : t.winner(winner.name)}
+            </h2>
+            {/* Klaverjassen has no payout scheme, so the settlement stays hidden. */}
+            {!klaverjas && (
+              <>
+                <h3 className="mb-2 font-semibold text-stone-600 dark:text-stone-300">{t.payments}</h3>
+                <ul className="space-y-1">
+                  {computePayments(state, game.ruleSet).map((line) => {
+                    const from = game.players.find((p) => p.id === line.from)!
+                    return (
+                      <li key={line.from} className="flex justify-between text-stone-700 dark:text-stone-200">
+                        <span>{t.pays(from.name, formatEuro(line.amount), winner.name)}</span>
+                      </li>
+                    )
+                  })}
+                  <li className="mt-1 flex justify-between border-t border-stone-200 pt-2 font-bold dark:border-stone-600">
+                    <span>{t.receivesTotal(winner.name, formatEuro(totalForWinner(computePayments(state, game.ruleSet))))}</span>
                   </li>
-                )
-              })}
-              <li className="mt-1 flex justify-between border-t border-stone-200 pt-2 font-bold dark:border-stone-600">
-                <span>{t.receivesTotal(winner.name, formatEuro(totalForWinner(computePayments(state, game.ruleSet))))}</span>
-              </li>
-            </ul>
-            <p className="mt-2 text-xs text-stone-400 dark:text-stone-500">{t.paymentsNote}</p>
+                </ul>
+                <p className="mt-2 text-xs text-stone-400 dark:text-stone-500">{t.paymentsNote}</p>
+              </>
+            )}
             <button
-              onClick={() => onRematch(game.players)}
+              onClick={() => onRematch(game.players, game.ruleSet.gameType ?? 'hartenjagen')}
               className="mt-4 w-full rounded-2xl bg-red-700 px-4 py-3 font-bold text-white active:bg-red-800 dark:bg-red-400 dark:text-red-950 dark:active:bg-red-300"
             >
               {t.newGameSamePlayers}
@@ -135,14 +156,22 @@ export function GameScreen({ game, onClose, onRematch }: Props) {
               <tbody>
                 {game.rounds.slice(0, history.length).map((round, i) => {
                   const deltas = roundDeltas(round, game.ruleSet, game.players.map((p) => p.id))
+                  const isPit = round.kind === 'pit' || (round.kind === 'klaverjas' && !!round.pitTeamId)
+                  const isNat =
+                    round.kind === 'klaverjas' &&
+                    potjeResult(round, klaverjas!, game.players.map((p) => p.id)).nat
                   return (
                     <tr key={i} className="border-b border-stone-100 last:border-0 dark:border-stone-700">
-                      <td className="px-3 py-1.5 text-stone-400 dark:text-stone-500">
+                      <td className="whitespace-nowrap px-3 py-1.5 text-stone-400 dark:text-stone-500">
                         {i + 1}
-                        {round.kind === 'pit' ? ' 💥' : ''}
+                        {isPit ? ' 💥' : ''}
+                        {isNat && <span className="ml-1 font-bold text-red-700 dark:text-red-400">{t.nat}</span>}
                       </td>
                       {game.players.map((p) => (
                         <td key={p.id} className="px-3 py-1.5 text-right">
+                          {round.kind === 'klaverjas' && round.trumpTeamId === p.id && (
+                            <span className="text-stone-400 dark:text-stone-500">♣ </span>
+                          )}
                           <span className="text-stone-400 dark:text-stone-500">{deltas[p.id] !== 0 ? deltas[p.id] : '·'}</span>{' '}
                           <span className="font-semibold">{history[i].standings.find((s) => s.playerId === p.id)!.score}</span>
                         </td>
@@ -159,6 +188,47 @@ export function GameScreen({ game, onClose, onRematch }: Props) {
       {/* Fixed bottom actions: always visible, never scrolled away */}
       {!winner && !state.pendingTie && (
         <div className="shrink-0 space-y-1 pt-2">
+          {/* Klaverjassen: tally roem live during the potje; it flows into the next entry. */}
+          {klaverjas && (
+            <div className="rounded-2xl bg-white p-3 shadow-sm dark:bg-stone-800">
+              <div className="mb-2 flex items-center justify-between text-sm">
+                <span className="font-semibold text-stone-600 dark:text-stone-300">
+                  {t.roem} · {t.potje.toLowerCase()} {game.rounds.length + 1}
+                </span>
+                <span className="text-stone-400 dark:text-stone-500">🂠 {t.deals(dealer!.name)}</span>
+              </div>
+              <div className="space-y-1.5">
+                {game.players.map((p) => (
+                  <div key={p.id} className="flex items-center gap-2">
+                    <span className="w-16 truncate text-sm font-semibold">{p.name}</span>
+                    <span className="w-12 text-right text-lg font-bold tabular-nums">{draftRoem[p.id]}</span>
+                    {ROEM_STEPS.map((step) => (
+                      <button
+                        key={step}
+                        onClick={() =>
+                          dispatch({
+                            type: 'set-draft-roem',
+                            gameId: game.id,
+                            roem: { ...draftRoem, [p.id]: draftRoem[p.id] + step },
+                          })
+                        }
+                        className="h-11 flex-1 rounded-xl bg-stone-100 text-xs font-bold text-stone-500 active:bg-stone-200 dark:bg-stone-900 dark:text-stone-400 dark:active:bg-stone-700"
+                      >
+                        +{step}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => dispatch({ type: 'set-draft-roem', gameId: game.id, roem: { ...draftRoem, [p.id]: 0 } })}
+                      disabled={draftRoem[p.id] === 0}
+                      className="h-11 rounded-xl bg-stone-100 px-2 text-xs font-bold text-stone-400 active:bg-stone-200 disabled:opacity-30 dark:bg-stone-900 dark:text-stone-500 dark:active:bg-stone-700"
+                    >
+                      ⟲
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {game.rounds.length > 0 && (
             <button
               onClick={() => dispatch({ type: 'undo-round', gameId: game.id })}
@@ -171,7 +241,7 @@ export function GameScreen({ game, onClose, onRematch }: Props) {
             onClick={() => setEntering(true)}
             className="w-full rounded-2xl bg-red-700 px-4 py-4 text-lg font-bold text-white shadow-lg shadow-red-700/20 active:bg-red-800 dark:bg-red-400 dark:text-red-950 dark:shadow-red-400/10 dark:active:bg-red-300"
           >
-            {t.enterRound}
+            {klaverjas ? t.enterPotje : t.enterRound}
           </button>
         </div>
       )}
@@ -207,14 +277,22 @@ export function GameScreen({ game, onClose, onRematch }: Props) {
         </div>
       )}
 
-      {entering && (
-        <RoundEntry
-          game={game}
-          roundNumber={game.rounds.length + 1}
-          onSave={addRound}
-          onCancel={() => setEntering(false)}
-        />
-      )}
+      {entering &&
+        (klaverjas ? (
+          <KlaverjasEntry
+            game={game}
+            roundNumber={game.rounds.length + 1}
+            onSave={addRound}
+            onCancel={() => setEntering(false)}
+          />
+        ) : (
+          <RoundEntry
+            game={game}
+            roundNumber={game.rounds.length + 1}
+            onSave={addRound}
+            onCancel={() => setEntering(false)}
+          />
+        ))}
     </div>
   )
 }

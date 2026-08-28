@@ -54,8 +54,13 @@ export function Home({ onNewGame }: { onNewGame: () => void }) {
                     </span>
                   </div>
                   <div className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-                    {date} · {game.rounds.length} {t.round.toLowerCase()}s
-                    {winner ? ` · ${t.winner(winner.name)}` : ''}
+                    {game.ruleSet.gameType === 'klaverjassen' ? `♣ ${t.klaverjassen}` : `♥ ${t.hartenjagen}`}
+                    {' · '}
+                    {date} · {game.rounds.length}{' '}
+                    {game.ruleSet.gameType === 'klaverjassen' ? `${t.potje.toLowerCase()}s` : `${t.round.toLowerCase()}s`}
+                    {winner
+                      ? ` · ${game.ruleSet.gameType === 'klaverjassen' ? t.teamWins(winner.name) : t.winner(winner.name)}`
+                      : ''}
                   </div>
                 </button>
               </li>

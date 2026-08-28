@@ -3,9 +3,9 @@ import { GameStoreProvider, useActiveGame, useGameStore } from './state/gameStor
 import { Home } from './pages/Home'
 import { Setup } from './pages/Setup'
 import { GameScreen } from './pages/GameScreen'
-import type { Player } from './engine/types'
+import type { GameType, Player } from './engine/types'
 
-export type View = { name: 'home' } | { name: 'setup'; presetPlayers?: Player[] }
+export type View = { name: 'home' } | { name: 'setup'; presetPlayers?: Player[]; presetGameType?: GameType }
 
 function Shell() {
   const [view, setView] = useState<View>({ name: 'home' })
@@ -20,16 +20,16 @@ function Shell() {
           dispatch({ type: 'close-game' })
           setView({ name: 'home' })
         }}
-        onRematch={(players) => {
+        onRematch={(players, gameType) => {
           dispatch({ type: 'close-game' })
-          setView({ name: 'setup', presetPlayers: players })
+          setView({ name: 'setup', presetPlayers: players, presetGameType: gameType })
         }}
       />
     )
   }
 
   if (view.name === 'setup') {
-    return <Setup presetPlayers={view.presetPlayers} onBack={() => setView({ name: 'home' })} />
+    return <Setup presetPlayers={view.presetPlayers} presetGameType={view.presetGameType} onBack={() => setView({ name: 'home' })} />
   }
 
   return <Home onNewGame={() => setView({ name: 'setup' })} />
