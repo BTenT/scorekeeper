@@ -106,7 +106,7 @@ npx cap open android   # openen in Android Studio
 
 Draai `build:native` na elke webwijziging, anders bevat de app nog de oude versie. Android vereist **JDK 21**: Gradle 8.14 draait niet op de JDK 25 van Android Studio, dus zet in Android Studio de Gradle JDK op 21.
 
-- Iconen en splash komen uit `assets/`. Na een wijziging: `npx @capacitor/assets generate --ios --android`, met dezelfde achtergrondkleuren als nu in de native projecten.
+- Iconen en splash komen uit `assets/`; het ontwerp staat in `assets/icon.svg` (een waaier van drie kaarten op `#b91c1c`). De PNG's in `assets/` en `public/pwa-*.png` zijn daaruit afgeleid: bij het voorgrondicoon voor Android zonder achtergrond, bij de PWA-iconen iets kleiner vanwege de maskering. Na een wijziging: `npx @capacitor/assets generate --ios --android`, met dezelfde achtergrondkleuren als nu in de native projecten.
 - Elke release: verhoog `versionCode` en `versionName` in `android/app/build.gradle` en `Version` en `Build` in Xcode.
 - Updates lopen via store-review, niet via Vercel. De web-app blijft los daarvan bestaan.
 - Spellen staan per installatie in de eigen opslag: spellen uit de PWA gaan niet mee naar de app.
