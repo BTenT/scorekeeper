@@ -9,7 +9,7 @@ export function Home({ onNewGame }: { onNewGame: () => void }) {
     <div className="flex min-h-dvh flex-col px-4 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
       <header className="mb-6">
         <h1 className="text-3xl font-black text-red-700 dark:text-red-400">
-          ♥ {t.appName}
+          {t.appName}
         </h1>
         <p className="text-stone-500 dark:text-stone-400">{t.subtitle}</p>
       </header>
