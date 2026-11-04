@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# This project uses npm; a pnpm lockfile could switch the Vercel install to pnpm
+pnpm-lock.yaml
