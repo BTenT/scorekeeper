@@ -68,6 +68,16 @@ export function Home({ onNewGame }: { onNewGame: () => void }) {
           })}
         </ul>
       )}
+
+      {/* Absolute so the native apps open it in the browser instead of trapping the web view. */}
+      <a
+        href="https://scorekeeper-gules.vercel.app/privacy.html"
+        target="_blank"
+        rel="noreferrer"
+        className="mt-auto flex h-11 items-center justify-center pt-6 text-sm text-stone-500 underline dark:text-stone-400"
+      >
+        {t.privacyPolicy}
+      </a>
     </div>
   )
 }

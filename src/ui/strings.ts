@@ -6,6 +6,7 @@ export const t = {
   inProgress: 'Bezig',
   finished: 'Afgelopen',
   noGames: 'Nog geen spellen. Begin een nieuw spel!',
+  privacyPolicy: 'Privacybeleid',
   players: 'Spelers',
   playerName: (i: number) => `Speler ${i + 1}`,
   addPlayer: '+ Speler toevoegen',

@@ -103,6 +103,6 @@ Draai `build:native` na elke webwijziging, anders bevat de app nog de oude versi
 ### Publiceren
 
 1. **Accounts**: Apple Developer Program en Google Play Console. Controleer de actuele kosten en voorwaarden. Nieuwe persoonlijke Google-accounts moesten eerder eerst een gesloten test met testers draaien voordat ze naar productie mochten.
-2. **Privacybeleid**: beide stores vragen een openbare URL, ook al verzamelt de app niets.
+2. **Privacybeleid**: beide stores vragen een openbare URL. Die is `https://scorekeeper-gules.vercel.app/privacy.html` (bron: `public/privacy.html`, ook gelinkt op het startscherm). Bij een eigen domein ook de link in `src/pages/Home.tsx` aanpassen. Bij de privacyvragen in de stores kun je opgeven dat de app geen gegevens verzamelt.
 3. **iOS**: kies in Xcode je team onder Signing & Capabilities, dan Product → Archive → Distribute App → App Store Connect. Vul in App Store Connect de vermelding en de screenshots in en dien in via TestFlight of direct.
 4. **Android**: Build → Generate Signed App Bundle in Android Studio en upload de `.aab` naar de Play Console. Bewaar de keystore veilig en buiten git; laat Play App Signing aanstaan.
