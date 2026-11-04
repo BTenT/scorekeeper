@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Scorekeeper</string>
+    <string name="title_activity_main">Scorekeeper</string>
+    <string name="package_name">nl.btnt.scorekeeper</string>
+    <string name="custom_url_scheme">nl.btnt.scorekeeper</string>
+</resources>

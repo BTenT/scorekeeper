@@ -71,7 +71,7 @@ export function Setup({
     'w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-base shadow-sm outline-red-700 dark:border-stone-700 dark:bg-stone-800 dark:outline-red-400'
 
   return (
-    <div className="flex min-h-dvh flex-col px-4 pt-[max(1.5rem,env(safe-area-inset-top))] pb-6">
+    <div className="flex min-h-dvh flex-col px-4 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
       <header className="mb-6 flex items-center gap-3">
         <button onClick={onBack} className="rounded-full bg-white px-3 py-1.5 text-sm font-semibold shadow-sm active:bg-stone-50 dark:bg-stone-800 dark:active:bg-stone-700">
           ← {t.back}

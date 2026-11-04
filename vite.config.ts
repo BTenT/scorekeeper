@@ -4,11 +4,13 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     tailwindcss(),
     VitePWA({
+      // Native apps bundle their assets and update through the stores.
+      disable: mode === 'native',
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
       manifest: {
@@ -31,4 +33,4 @@ export default defineConfig({
   test: {
     environment: 'node',
   },
-})
+}))

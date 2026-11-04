@@ -28,3 +28,7 @@ Mobile-first PWA for tracking Hartenjagen and Klaverjassen scores. **Read README
 ## Deployment
 
 GitHub repo `BTenT/scorekeeper` is connected to Vercel: **every commit pushed to `main` auto-deploys to production.** Only push verified work. No CI beyond that — the test suite runs locally.
+
+## Native apps
+
+`ios/` and `android/` are Capacitor wrappers around the same web app (see README "Native apps"). `npm run build:native` builds without the service worker and syncs; run it after any web change before building natively. Store releases don't go through Vercel. Android needs JDK 21, not Android Studio's bundled JDK 25. UI changes that touch layout, safe areas or inputs must also be checked on an iOS simulator and an Android emulator, with the keyboard open: `Keyboard.resize: 'native'` shrinks the web view, and a page taller than the screen keeps its scroll offset across views.

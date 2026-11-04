@@ -79,4 +79,30 @@ npm test        # engine- en store-tests
 npm run build   # productie-build incl. service worker
 ```
 
+`npm test` en `npm run build` gelden ook voor de native apps; zie "Native apps" hieronder voor de rest.
+
 Deploy: het GitHub-repo is aan Vercel gekoppeld — **elke commit op `main` deployt automatisch naar productie**. Push dus alleen naar `main` wat live mag.
+
+## Native apps (App Store en Play Store)
+
+De iOS- en Android-app zijn een [Capacitor](https://capacitorjs.com)-schil om dezelfde web-app. De webbestanden zitten in de app zelf, dus ze werken volledig offline en praten met geen enkele server. App-ID: `nl.btnt.scorekeeper` (na publicatie niet meer te wijzigen). iOS is alleen voor iPhone, beide apps alleen in portret.
+
+```bash
+npm run build:native   # web-build zonder service worker + cap sync naar ios/ en android/
+npx cap open ios       # openen in Xcode
+npx cap open android   # openen in Android Studio
+```
+
+Draai `build:native` na elke webwijziging, anders bevat de app nog de oude versie. Android vereist **JDK 21**: Gradle 8.14 draait niet op de JDK 25 van Android Studio, dus zet in Android Studio de Gradle JDK op 21.
+
+- Iconen en splash komen uit `assets/`. Na een wijziging: `npx @capacitor/assets generate --ios --android`, met dezelfde achtergrondkleuren als nu in de native projecten.
+- Elke release: verhoog `versionCode` en `versionName` in `android/app/build.gradle` en `Version` en `Build` in Xcode.
+- Updates lopen via store-review, niet via Vercel. De web-app blijft los daarvan bestaan.
+- Spellen staan per installatie in de eigen opslag: spellen uit de PWA gaan niet mee naar de app.
+
+### Publiceren
+
+1. **Accounts**: Apple Developer Program en Google Play Console. Controleer de actuele kosten en voorwaarden. Nieuwe persoonlijke Google-accounts moesten eerder eerst een gesloten test met testers draaien voordat ze naar productie mochten.
+2. **Privacybeleid**: beide stores vragen een openbare URL, ook al verzamelt de app niets.
+3. **iOS**: kies in Xcode je team onder Signing & Capabilities, dan Product → Archive → Distribute App → App Store Connect. Vul in App Store Connect de vermelding en de screenshots in en dien in via TestFlight of direct.
+4. **Android**: Build → Generate Signed App Bundle in Android Studio en upload de `.aab` naar de Play Console. Bewaar de keystore veilig en buiten git; laat Play App Signing aanstaan.

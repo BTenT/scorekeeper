@@ -38,10 +38,12 @@ function Shell() {
 function App() {
   return (
     <GameStoreProvider>
-      <div className="min-h-dvh bg-stone-100 text-stone-900 dark:bg-stone-950 dark:text-stone-100" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <div className="min-h-dvh bg-stone-100 text-stone-900 dark:bg-stone-950 dark:text-stone-100">
         <div className="mx-auto max-w-md">
           <Shell />
         </div>
+        {/* Keeps scrolled content from running under the status bar in the native apps. */}
+        <div className="fixed inset-x-0 top-0 h-[env(safe-area-inset-top)] bg-stone-100 dark:bg-stone-950" />
       </div>
     </GameStoreProvider>
   )
