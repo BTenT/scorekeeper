@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Game, PitChoice, PlayerId, Round } from '../engine/types'
 import { validateRound } from '../engine/validation'
+import { useBackButton } from '../ui/backButton'
 import { t } from '../ui/strings'
 
 interface Props {
@@ -17,6 +18,7 @@ export function RoundEntry({ game, roundNumber, onSave, onCancel }: Props) {
     Object.fromEntries(game.players.map((p) => [p.id, '0'])),
   )
   const [pitPlayer, setPitPlayer] = useState<PlayerId | null>(null)
+  useBackButton(() => (pitPlayer ? setPitPlayer(null) : onCancel()))
   const total = game.ruleSet.pointsPerRound
 
   const points: Record<PlayerId, number> = Object.fromEntries(

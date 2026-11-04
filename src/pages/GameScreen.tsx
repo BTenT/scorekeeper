@@ -7,6 +7,7 @@ import { useGameStore } from '../state/gameStore'
 import { RoundEntry } from '../components/RoundEntry'
 import { KlaverjasEntry } from '../components/KlaverjasEntry'
 import { RulesDialog } from '../components/RulesDialog'
+import { useBackButton } from '../ui/backButton'
 import { t } from '../ui/strings'
 
 interface Props {
@@ -21,7 +22,8 @@ export function GameScreen({ game, onClose, onRematch }: Props) {
   const { dispatch } = useGameStore()
   const [entering, setEntering] = useState(false)
   const [showRules, setShowRules] = useState(false)
-  const klaverjas = isKlaverjas(game.ruleSet) ? game.ruleSet.klaverjas! : null
+  useBackButton(onClose)
+  const klaverjas =isKlaverjas(game.ruleSet) ? game.ruleSet.klaverjas! : null
   const concours = klaverjas?.potjes ? concoursTotals(game) : null
   const state = computeState(game)
   const history = stateHistory(game)

@@ -6,6 +6,7 @@ import type { GameType, Player, RuleSet } from '../engine/types'
 import { RulesDialog } from '../components/RulesDialog'
 import { useGameStore } from '../state/gameStore'
 import { newId } from '../state/storage'
+import { useBackButton } from '../ui/backButton'
 import { t } from '../ui/strings'
 
 const MIN_PLAYERS = 4
@@ -21,6 +22,7 @@ export function Setup({
   onBack: () => void
 }) {
   const { dispatch } = useGameStore()
+  useBackButton(onBack)
   const [gameType, setGameType] = useState<GameType>(presetGameType ?? 'hartenjagen')
   const [names, setNames] = useState<string[]>(
     presetGameType !== 'klaverjassen' && presetPlayers

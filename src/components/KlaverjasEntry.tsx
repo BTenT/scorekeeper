@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Game, KlaverjasRound, PlayerId, Round } from '../engine/types'
 import { dealerIdForRound, potjeResult, toVariantUnits } from '../engine/klaverjas'
 import { validateRound } from '../engine/validation'
+import { useBackButton } from '../ui/backButton'
 import { t } from '../ui/strings'
 
 interface Props {
@@ -14,6 +15,7 @@ interface Props {
 const ROEM_STEPS = [20, 50, 100]
 
 export function KlaverjasEntry({ game, roundNumber, onSave, onCancel }: Props) {
+  useBackButton(onCancel)
   const rules = game.ruleSet.klaverjas!
   const total = rules.pointsPerPotje
   const teamIds = game.players.map((p) => p.id)

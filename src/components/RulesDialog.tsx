@@ -3,6 +3,7 @@ import { isKlaverjas, toVariantUnits } from '../engine/klaverjas'
 import { formatEuro, playsForMoney } from '../engine/payment'
 import { ruleSets } from '../engine/rules'
 import { hasReturnGame } from '../engine/scoring'
+import { useBackButton } from '../ui/backButton'
 import { t } from '../ui/strings'
 
 function sectionsFor(ruleSet: RuleSet) {
@@ -24,6 +25,7 @@ function sectionsFor(ruleSet: RuleSet) {
 }
 
 export function RulesDialog({ ruleSet, onClose }: { ruleSet: RuleSet; onClose: () => void }) {
+  useBackButton(onClose)
   // A saved game keeps its rule set, including the name it had back then; show the current name.
   const name = ruleSets.find((r) => r.id === ruleSet.id)?.name ?? ruleSet.name
   return (

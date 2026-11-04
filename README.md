@@ -68,6 +68,7 @@ Bij de setup kies je **Klaverjassen**: 2 teams ("Wij"/"Zij" standaard, namen aan
 - Highlights op de standen: **groen + "laagste"** en **oranje + "hoogste"** (allen bij gelijke stand; niets zolang iedereen gelijk staat). De winnaar krijgt amber + 🏆.
 - Banner "↓ Retourspel — punten tellen af" zodra het retourspel actief is.
 - Punteninvoer: veld op 0 **leegt zichzelf bij focus**; een andere waarde wordt geselecteerd om direct te overschrijven; leeg veld telt als 0 en springt bij verlaten terug naar 0. Alleen cijfers, afgekapt op het rondetotaal.
+- **Terugknop op Android**: sluit eerst een popup of de ronde-invoer, gaat dan naar het vorige scherm en verlaat pas op het startscherm de app. Nieuwe schermen en popups registreren zich met `useBackButton`.
 - **Dark mode** volgt de systeeminstelling; het donkerrood (`red-700`) wordt in dark mode een lichter rood (`red-400` met donkere tekst) op `stone-950/800`-vlakken.
 
 ## Techniek
