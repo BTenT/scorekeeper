@@ -25,9 +25,31 @@ export function roundDeltas(round: Round, ruleSet: RuleSet, playerIds: PlayerId[
   return deltas
 }
 
+export function hasReturnGame(ruleSet: RuleSet): boolean {
+  return ruleSet.returnGame !== false
+}
+
+/** No return game: as soon as a player reaches turnAt the game ends; the lowest wins, level is a draw. */
+function computeNoReturnState(game: Game): GameState {
+  let standings = game.players.map((p) => ({ playerId: p.id, score: 0 }))
+  for (const round of game.rounds) {
+    const deltas = roundDeltas(round, game.ruleSet, game.players.map((p) => p.id))
+    standings = standings.map((s) => ({ ...s, score: s.score + deltas[s.playerId] }))
+    if (standings.some((s) => s.score >= game.ruleSet.turnAt)) {
+      const lowest = Math.min(...standings.map((s) => s.score))
+      const leaders = standings.filter((s) => s.score === lowest)
+      return leaders.length === 1
+        ? { standings, phase: 'up', winnerId: leaders[0].playerId, pendingTie: null }
+        : { standings, phase: 'up', winnerId: null, pendingTie: null, draw: true }
+    }
+  }
+  return { standings, phase: 'up', winnerId: null, pendingTie: null }
+}
+
 /** Replay all rounds from scratch; stops at the first winner. */
 export function computeState(game: Game): GameState {
   if (isKlaverjas(game.ruleSet)) return computeKlaverjasState(game)
+  if (!hasReturnGame(game.ruleSet)) return computeNoReturnState(game)
   let standings = game.players.map((p) => ({ playerId: p.id, score: 0 }))
   let phase: Phase = 'up'
   let winnerId: PlayerId | null = null

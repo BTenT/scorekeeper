@@ -28,6 +28,7 @@ export function Home({ onNewGame }: { onNewGame: () => void }) {
           {state.games.map((game) => {
             const gameState = computeState(game)
             const winner = game.players.find((p) => p.id === gameState.winnerId)
+            const finished = !!winner || !!gameState.draw
             const date = new Date(game.createdAt).toLocaleDateString('nl-NL', {
               day: 'numeric',
               month: 'short',
@@ -45,22 +46,24 @@ export function Home({ onNewGame }: { onNewGame: () => void }) {
                     </span>
                     <span
                       className={`ml-2 shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                        winner
+                        finished
                           ? 'bg-stone-200 text-stone-600 dark:bg-stone-700 dark:text-stone-300'
                           : 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
                       }`}
                     >
-                      {winner ? t.finished : t.inProgress}
+                      {finished ? t.finished : t.inProgress}
                     </span>
                   </div>
                   <div className="mt-1 text-sm text-stone-500 dark:text-stone-400">
                     {game.ruleSet.gameType === 'klaverjassen' ? `♣ ${t.klaverjassen}` : `♥ ${t.hartenjagen}`}
                     {' · '}
                     {date} · {game.rounds.length}{' '}
-                    {game.ruleSet.gameType === 'klaverjassen' ? `${t.potje.toLowerCase()}s` : `${t.round.toLowerCase()}s`}
+                    {`${t.round.toLowerCase()}s`}
                     {winner
                       ? ` · ${game.ruleSet.gameType === 'klaverjassen' ? t.teamWins(winner.name) : t.winner(winner.name)}`
-                      : ''}
+                      : gameState.draw
+                        ? ` · ${t.draw}`
+                        : ''}
                   </div>
                 </button>
               </li>

@@ -1,11 +1,12 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import type { Game, GameType, Player, Round } from '../engine/types'
 import { computeState, roundDeltas, stateHistory } from '../engine/scoring'
-import { computePayments, formatEuro, totalForWinner } from '../engine/payment'
-import { dealerIdForRound, isKlaverjas, potjeResult } from '../engine/klaverjas'
+import { computePayments, formatEuro, playsForMoney, totalForWinner } from '../engine/payment'
+import { concoursTotals, dealerIdForRound, isKlaverjas, potjeParts, potjeResult } from '../engine/klaverjas'
 import { useGameStore } from '../state/gameStore'
 import { RoundEntry } from '../components/RoundEntry'
 import { KlaverjasEntry } from '../components/KlaverjasEntry'
+import { RulesDialog } from '../components/RulesDialog'
 import { t } from '../ui/strings'
 
 interface Props {
@@ -19,15 +20,18 @@ const ROEM_STEPS = [20, 50, 100]
 export function GameScreen({ game, onClose, onRematch }: Props) {
   const { dispatch } = useGameStore()
   const [entering, setEntering] = useState(false)
+  const [showRules, setShowRules] = useState(false)
   const klaverjas = isKlaverjas(game.ruleSet) ? game.ruleSet.klaverjas! : null
+  const concours = klaverjas?.potjes ? concoursTotals(game) : null
   const state = computeState(game)
   const history = stateHistory(game)
   const winner = game.players.find((p) => p.id === state.winnerId) ?? null
+  const finished = !!winner || !!state.draw
   const lowest = Math.min(...state.standings.map((s) => s.score))
   const highest = Math.max(...state.standings.map((s) => s.score))
   // No highlights before the first round or while everyone is tied.
   // Klaverjassen: high is good, so only the leading team gets a (green) highlight.
-  const highlightActive = !winner && game.rounds.length > 0 && lowest !== highest
+  const highlightActive = !finished && game.rounds.length > 0 && lowest !== highest
   const dealer = klaverjas ? game.players.find((p) => p.id === dealerIdForRound(game, game.rounds.length))! : null
   const draftRoem: Record<string, number> = Object.fromEntries(
     game.players.map((p) => [p.id, game.draftRoem?.[p.id] ?? 0]),
@@ -43,6 +47,12 @@ export function GameScreen({ game, onClose, onRematch }: Props) {
       <header className="mb-4 flex shrink-0 items-center justify-between">
         <button onClick={onClose} className="rounded-full bg-white px-3 py-1.5 text-sm font-semibold shadow-sm active:bg-stone-50 dark:bg-stone-800 dark:active:bg-stone-700">
           ← {t.back}
+        </button>
+        <button
+          onClick={() => setShowRules(true)}
+          className="-my-2 h-11 px-2 text-sm font-semibold text-red-700 active:text-red-900 dark:text-red-400 dark:active:text-red-300"
+        >
+          {t.rules}
         </button>
         <button
           onClick={() => {
@@ -97,8 +107,14 @@ export function GameScreen({ game, onClose, onRematch }: Props) {
               </div>
               <div className="text-3xl font-black tabular-nums">
                 {s.score}
-                {klaverjas && <span className="text-sm font-semibold text-stone-400 dark:text-stone-500"> / {klaverjas.target}</span>}
+                {klaverjas && !concours && <span className="text-sm font-semibold text-stone-400 dark:text-stone-500"> / {klaverjas.target}</span>}
               </div>
+              {concours && (
+                <div className="mt-0.5 text-xs tabular-nums text-stone-500 dark:text-stone-400">
+                  <div>{t.points} {concours[s.playerId].points} / {klaverjas!.target}</div>
+                  <div>{t.roem} {concours[s.playerId].roem} · {t.pitColumn} {concours[s.playerId].pit}</div>
+                </div>
+              )}
             </div>
           )
         })}
@@ -106,13 +122,13 @@ export function GameScreen({ game, onClose, onRematch }: Props) {
 
       {/* Scrollable middle: winner card + score history */}
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {winner && (
+        {finished && (
           <div className="mb-4 rounded-2xl bg-white p-4 shadow-sm dark:bg-stone-800">
             <h2 className="mb-1 text-xl font-black text-amber-600 dark:text-amber-400">
-              🏆 {klaverjas ? t.teamWins(winner.name) : t.winner(winner.name)}
+              {winner ? `🏆 ${klaverjas ? t.teamWins(winner.name) : t.winner(winner.name)}` : t.draw}
             </h2>
-            {/* Klaverjassen has no payout scheme, so the settlement stays hidden. */}
-            {!klaverjas && (
+            {/* Klaverjassen has no payout scheme and playing for money is optional, so the settlement can stay hidden. */}
+            {winner && !klaverjas && playsForMoney(game.ruleSet) && (
               <>
                 <h3 className="mb-2 font-semibold text-stone-600 dark:text-stone-300">{t.payments}</h3>
                 <ul className="space-y-1">
@@ -140,7 +156,9 @@ export function GameScreen({ game, onClose, onRematch }: Props) {
           </div>
         )}
 
-        {game.rounds.length > 0 && (
+        {concours && game.rounds.length > 0 && <ConcoursTable game={game} />}
+
+        {!concours && game.rounds.length > 0 && (
           <div className="rounded-2xl bg-white shadow-sm dark:bg-stone-800">
             <table className="w-full text-sm tabular-nums">
               <thead>
@@ -186,14 +204,15 @@ export function GameScreen({ game, onClose, onRematch }: Props) {
       </div>
 
       {/* Fixed bottom actions: always visible, never scrolled away */}
-      {!winner && !state.pendingTie && (
+      {!finished && !state.pendingTie && (
         <div className="shrink-0 space-y-1 pt-2">
           {/* Klaverjassen: tally roem live during the potje; it flows into the next entry. */}
           {klaverjas && (
             <div className="rounded-2xl bg-white p-3 shadow-sm dark:bg-stone-800">
               <div className="mb-2 flex items-center justify-between text-sm">
                 <span className="font-semibold text-stone-600 dark:text-stone-300">
-                  {t.roem} · {t.potje.toLowerCase()} {game.rounds.length + 1}
+                  {t.roem} · {t.round.toLowerCase()} {game.rounds.length + 1}
+                  {klaverjas.potjes ? ` / ${klaverjas.potjes}` : ''}
                 </span>
                 <span className="text-stone-400 dark:text-stone-500">🂠 {t.deals(dealer!.name)}</span>
               </div>
@@ -241,7 +260,7 @@ export function GameScreen({ game, onClose, onRematch }: Props) {
             onClick={() => setEntering(true)}
             className="w-full rounded-2xl bg-red-700 px-4 py-4 text-lg font-bold text-white shadow-lg shadow-red-700/20 active:bg-red-800 dark:bg-red-400 dark:text-red-950 dark:shadow-red-400/10 dark:active:bg-red-300"
           >
-            {klaverjas ? t.enterPotje : t.enterRound}
+            {t.enterRound}
           </button>
         </div>
       )}
@@ -277,6 +296,8 @@ export function GameScreen({ game, onClose, onRematch }: Props) {
         </div>
       )}
 
+      {showRules && <RulesDialog ruleSet={game.ruleSet} onClose={() => setShowRules(false)} />}
+
       {entering &&
         (klaverjas ? (
           <KlaverjasEntry
@@ -293,6 +314,67 @@ export function GameScreen({ game, onClose, onRematch }: Props) {
             onCancel={() => setEntering(false)}
           />
         ))}
+    </div>
+  )
+}
+
+/** Concours score sheet: points, roem and pit per team, per potje. */
+function ConcoursTable({ game }: { game: Game }) {
+  const rules = game.ruleSet.klaverjas!
+  const ids = game.players.map((p) => p.id)
+  const dot = (n: number) => (n !== 0 ? n : '·')
+  return (
+    <div className="rounded-2xl bg-white shadow-sm dark:bg-stone-800">
+      <table className="w-full text-sm tabular-nums">
+        <thead>
+          <tr className="text-stone-500 dark:text-stone-400">
+            <th className="px-2 pt-2 text-left font-semibold">#</th>
+            {game.players.map((p) => (
+              <th key={p.id} colSpan={3} className="px-1.5 pt-2 text-center font-semibold">
+                {p.name.slice(0, 12)}
+              </th>
+            ))}
+          </tr>
+          <tr className="border-b border-stone-200 text-right text-xs text-stone-400 dark:border-stone-700 dark:text-stone-500">
+            <th />
+            {game.players.map((p) => (
+              <Fragment key={p.id}>
+                <th className="px-1.5 pb-1 font-normal">{t.pointsShort}</th>
+                <th className="px-1.5 pb-1 font-normal">{t.roem}</th>
+                <th className="px-1.5 pb-1 font-normal">{t.pitColumn}</th>
+              </Fragment>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {game.rounds.slice(0, rules.potjes).map((round, i) => {
+            if (round.kind !== 'klaverjas') return null
+            const parts = potjeParts(round, rules, ids)
+            const isNat = potjeResult(round, rules, ids).nat
+            return (
+              <tr key={i} className="border-b border-stone-100 text-right last:border-0 dark:border-stone-700">
+                <td className="px-2 py-1.5 text-left text-stone-400 dark:text-stone-500">{i + 1}</td>
+                {game.players.map((p) => (
+                  <Fragment key={p.id}>
+                    <td className="whitespace-nowrap px-1.5 py-1.5 font-semibold">
+                      {round.trumpTeamId === p.id && (
+                        <span className="font-normal text-stone-400 dark:text-stone-500">♣ </span>
+                      )}
+                      {isNat && round.trumpTeamId === p.id ? (
+                        <span className="font-bold text-red-700 dark:text-red-400">{t.nat}</span>
+                      ) : (
+                        dot(parts[p.id].points)
+                      )}
+                    </td>
+                    <td className="px-1.5 py-1.5 text-stone-500 dark:text-stone-400">{dot(parts[p.id].roem)}</td>
+                    <td className="px-1.5 py-1.5 text-stone-500 dark:text-stone-400">{dot(parts[p.id].pit)}</td>
+                  </Fragment>
+                ))}
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
     </div>
   )
 }

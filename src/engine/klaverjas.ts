@@ -1,4 +1,4 @@
-import type { Game, GameState, KlaverjasRound, KlaverjasRules, PlayerId, RuleSet } from './types'
+import type { Game, GameState, KlaverjasRound, KlaverjasRules, PlayerId, RuleSet, ScoreParts } from './types'
 
 export function isKlaverjas(ruleSet: RuleSet): boolean {
   return ruleSet.gameType === 'klaverjassen'
@@ -52,12 +52,74 @@ export function potjeResult(round: KlaverjasRound, rules: KlaverjasRules, teamId
 }
 
 /**
+ * One potje split into points, roem and pit per team, raw. Nat works as in
+ * potjeResult: the opponent receives all three, so its parts hold everything.
+ */
+export function potjeParts(
+  round: KlaverjasRound,
+  rules: KlaverjasRules,
+  teamIds: PlayerId[],
+): Record<PlayerId, ScoreParts> {
+  const parts = (id: PlayerId): ScoreParts => ({
+    points: round.points[id] ?? 0,
+    roem: round.roem[id] ?? 0,
+    pit: round.pitTeamId === id ? rules.pitBonus : 0,
+  })
+  const trump = round.trumpTeamId
+  const other = teamIds.find((id) => id !== trump)!
+  if (!potjeResult(round, rules, teamIds).nat) {
+    return { [trump]: parts(trump), [other]: parts(other) }
+  }
+  const [a, b] = [parts(trump), parts(other)]
+  return {
+    [trump]: { points: 0, roem: 0, pit: 0 },
+    [other]: { points: a.points + b.points, roem: a.roem + b.roem, pit: a.pit + b.pit },
+  }
+}
+
+/** Concours tally per team over the potjes that count. */
+export function concoursTotals(game: Game): Record<PlayerId, ScoreParts> {
+  const rules = game.ruleSet.klaverjas!
+  const ids = game.players.map((p) => p.id)
+  const totals: Record<PlayerId, ScoreParts> = Object.fromEntries(
+    ids.map((id) => [id, { points: 0, roem: 0, pit: 0 }]),
+  )
+  for (const round of game.rounds.slice(0, rules.potjes)) {
+    if (round.kind !== 'klaverjas') continue
+    const parts = potjeParts(round, rules, ids)
+    for (const id of ids) {
+      totals[id] = {
+        points: totals[id].points + parts[id].points,
+        roem: totals[id].roem + parts[id].roem,
+        pit: totals[id].pit + parts[id].pit,
+      }
+    }
+  }
+  return totals
+}
+
+/** A concours has no target: after the last potje the highest total wins, level is a draw. */
+function computeConcoursState(game: Game, potjes: number): GameState {
+  const totals = concoursTotals(game)
+  const standings = game.players.map((p) => ({
+    playerId: p.id,
+    score: totals[p.id].points + totals[p.id].roem + totals[p.id].pit,
+  }))
+  const state: GameState = { standings, phase: 'up', winnerId: null, pendingTie: null }
+  if (game.rounds.length < potjes) return state
+  const [a, b] = standings
+  if (a.score === b.score) return { ...state, draw: true }
+  return { ...state, winnerId: a.score > b.score ? a.playerId : b.playerId }
+}
+
+/**
  * Replay all potjes; the first team at or above the target wins. When both
  * teams reach the target in the same potje the higher score wins; at an exact
  * tie play continues.
  */
 export function computeKlaverjasState(game: Game): GameState {
   const rules = game.ruleSet.klaverjas!
+  if (rules.potjes) return computeConcoursState(game, rules.potjes)
   const ids = game.players.map((p) => p.id)
   let standings = ids.map((playerId) => ({ playerId, score: 0 }))
   let winnerId: PlayerId | null = null

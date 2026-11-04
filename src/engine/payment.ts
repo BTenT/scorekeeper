@@ -1,11 +1,16 @@
 import type { GameState, PaymentLine, RuleSet } from './types'
 
+/** Whether this game is played for money. Games saved before the option existed are. */
+export function playsForMoney(ruleSet: RuleSet): boolean {
+  return ruleSet.payment.enabled !== false
+}
+
 /**
  * Winner takes all: every other player pays the winner
  * gameFee + perPoint x their own final score (never less than the fee).
  */
 export function computePayments(state: GameState, ruleSet: RuleSet): PaymentLine[] {
-  if (!state.winnerId) return []
+  if (!state.winnerId || !playsForMoney(ruleSet)) return []
   const { perPoint, gameFee } = ruleSet.payment
   return state.standings
     .filter((s) => s.playerId !== state.winnerId)

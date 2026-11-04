@@ -77,7 +77,8 @@ export function KlaverjasEntry({ game, roundNumber, onSave, onCancel }: Props) {
       >
         <div className="mb-1 flex items-center justify-between">
           <h2 className="text-lg font-bold">
-            {t.potje} {roundNumber}
+            {t.round} {roundNumber}
+            {rules.potjes ? ` / ${rules.potjes}` : ''}
           </h2>
           <span
             className={`rounded-full px-3 py-1 text-sm font-bold tabular-nums ${

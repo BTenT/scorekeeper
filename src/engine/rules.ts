@@ -1,9 +1,9 @@
 import type { RuleSet } from './types'
 
-/** House rules: 32-card deck (7 and up), 25 points per round. */
+/** Dutch 32-card variant (7 and up): 25 points per round. The id predates the name; saved games carry it. */
 export const huisregels: RuleSet = {
   id: 'huisregels',
-  name: 'Huisregels (32 kaarten)',
+  name: 'Nederlands (25 punten)',
   pointsPerRound: 25,
   cards: [
     { label: 'Harten', value: 1, count: 8 },
@@ -17,21 +17,33 @@ export const huisregels: RuleSet = {
   payment: { perPoint: 0.05, gameFee: 0.5, scheme: 'winner-takes-all-own-score' },
 }
 
-/** Standard 52-card variant: hearts 1 each, Q♠ 5, J♣ 2, last trick 5. */
-export const standaard: RuleSet = {
-  id: 'standaard',
-  name: 'Standaard (52 kaarten)',
-  pointsPerRound: 25,
+/** Dutch 32-card variant without the ruiten tien: 15 points per round, return game from 50. */
+export const nederlands15: RuleSet = {
+  ...huisregels,
+  id: 'nederlands-15',
+  name: 'Nederlands (15 punten)',
+  pointsPerRound: 15,
   cards: [
-    { label: 'Harten', value: 1, count: 13 },
+    { label: 'Harten', value: 1, count: 8 },
     { label: 'Schoppenvrouw', value: 5, count: 1 },
     { label: 'Klaverenboer', value: 2, count: 1 },
-    { label: 'Laatste slag', value: 5, count: 1 },
   ],
-  pit: { selfDelta: -25, othersDelta: 25 },
-  turnAt: 100,
-  winBelow: 0,
-  payment: { perPoint: 0.05, gameFee: 0.5, scheme: 'winner-takes-all-own-score' },
+  pit: { selfDelta: -15, othersDelta: 15 },
+  turnAt: 50,
+}
+
+/** American 52-card variant: 26 points per round, no return game, lowest wins once someone hits turnAt. */
+export const amerikaans: RuleSet = {
+  ...huisregels,
+  id: 'amerikaans',
+  name: 'Amerikaans (52 kaarten)',
+  returnGame: false,
+  pointsPerRound: 26,
+  cards: [
+    { label: 'Harten', value: 1, count: 13 },
+    { label: 'Schoppenvrouw', value: 13, count: 1 },
+  ],
+  pit: { selfDelta: -26, othersDelta: 26 },
 }
 
 /** Klaverjassen with full scores: 162 + roem per potje, first team at 1600 wins. */
@@ -56,7 +68,15 @@ export const klaverjasAfgerond: RuleSet = {
   klaverjas: { variant: 'afgerond', target: 160, pointsPerPotje: 162, pitBonus: 100 },
 }
 
-export const ruleSets: RuleSet[] = [huisregels, standaard, klaverjasVolledig, klaverjasAfgerond]
+/** Klaverjassen as a concours: 16 potjes (2592 card points), points, roem and pit kept apart. */
+export const klaverjasConcours: RuleSet = {
+  ...klaverjasVolledig,
+  id: 'klaverjas-concours',
+  name: 'Concours (16 rondes)',
+  klaverjas: { variant: 'concours', target: 2592, potjes: 16, pointsPerPotje: 162, pitBonus: 100 },
+}
 
-export const hartenjagenRuleSets: RuleSet[] = [huisregels, standaard]
-export const klaverjasRuleSets: RuleSet[] = [klaverjasVolledig, klaverjasAfgerond]
+export const ruleSets: RuleSet[] = [huisregels, nederlands15, amerikaans, klaverjasVolledig, klaverjasAfgerond, klaverjasConcours]
+
+export const hartenjagenRuleSets: RuleSet[] = [huisregels, nederlands15, amerikaans]
+export const klaverjasRuleSets: RuleSet[] = [klaverjasVolledig, klaverjasAfgerond, klaverjasConcours]

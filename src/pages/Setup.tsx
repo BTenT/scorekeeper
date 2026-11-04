@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import { huisregels, hartenjagenRuleSets, klaverjasRuleSets, klaverjasVolledig } from '../engine/rules'
+import { huisregels, hartenjagenRuleSets, klaverjasConcours, klaverjasRuleSets } from '../engine/rules'
+import { hasReturnGame } from '../engine/scoring'
 import { validatePlayerCount } from '../engine/validation'
-import type { GameType, Player } from '../engine/types'
+import type { GameType, Player, RuleSet } from '../engine/types'
+import { RulesDialog } from '../components/RulesDialog'
 import { useGameStore } from '../state/gameStore'
 import { newId } from '../state/storage'
 import { t } from '../ui/strings'
@@ -26,6 +28,7 @@ export function Setup({
       : Array.from({ length: MIN_PLAYERS }, () => ''),
   )
   const [ruleSetId, setRuleSetId] = useState(huisregels.id)
+  const [playForMoney, setPlayForMoney] = useState(false)
   const [perPointCents, setPerPointCents] = useState(5)
   const [gameFeeCents, setGameFeeCents] = useState(50)
   const [turnAt, setTurnAt] = useState(100)
@@ -35,37 +38,53 @@ export function Setup({
       ? presetPlayers.map((p) => p.name)
       : [t.teamWij, t.teamZij],
   )
-  const [klaverjasRuleSetId, setKlaverjasRuleSetId] = useState(klaverjasVolledig.id)
+  const [klaverjasRuleSetId, setKlaverjasRuleSetId] = useState(klaverjasConcours.id)
   const [firstDealerIndex, setFirstDealerIndex] = useState(0)
+  const [showRules, setShowRules] = useState(false)
 
   const trimmed = (gameType === 'klaverjassen' ? teamNames : names).map((n) => n.trim())
   const countOk = validatePlayerCount(trimmed.length, gameType).valid
   const namesOk = trimmed.every((n) => n.length > 0)
   const canStart = countOk && namesOk
 
+  const klaverjasRuleSet = klaverjasRuleSets.find((r) => r.id === klaverjasRuleSetId) ?? klaverjasConcours
+  const hartenjagenBase = hartenjagenRuleSets.find((r) => r.id === ruleSetId) ?? huisregels
+  const hartenjagenRuleSet: RuleSet = {
+    ...hartenjagenBase,
+    turnAt,
+    payment: {
+      ...hartenjagenBase.payment,
+      enabled: playForMoney,
+      perPoint: perPointCents / 100,
+      gameFee: gameFeeCents / 100,
+    },
+  }
+
   function start() {
     const players: Player[] = trimmed.map((name) => ({ id: newId(), name }))
     if (gameType === 'klaverjassen') {
-      const base = klaverjasRuleSets.find((r) => r.id === klaverjasRuleSetId) ?? klaverjasVolledig
       dispatch({
         type: 'new-game',
         players,
-        ruleSet: base,
+        ruleSet: klaverjasRuleSet,
         firstDealerId: players[firstDealerIndex]?.id ?? players[0].id,
       })
       return
     }
-    const base = hartenjagenRuleSets.find((r) => r.id === ruleSetId) ?? huisregels
-    dispatch({
-      type: 'new-game',
-      players,
-      ruleSet: {
-        ...base,
-        turnAt,
-        payment: { ...base.payment, perPoint: perPointCents / 100, gameFee: gameFeeCents / 100 },
-      },
-    })
+    dispatch({ type: 'new-game', players, ruleSet: hartenjagenRuleSet })
   }
+
+  const rulesHeading = (
+    <div className="mb-2 flex items-center justify-between">
+      <h2 className="font-semibold text-stone-600 dark:text-stone-300">{t.rules}</h2>
+      <button
+        onClick={() => setShowRules(true)}
+        className="-my-3 h-11 px-1 text-sm font-semibold text-red-700 active:text-red-900 dark:text-red-400 dark:active:text-red-300"
+      >
+        {t.explain}
+      </button>
+    </div>
+  )
 
   const inputClass =
     'w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-base shadow-sm outline-red-700 dark:border-stone-700 dark:bg-stone-800 dark:outline-red-400'
@@ -117,7 +136,7 @@ export function Setup({
           </section>
 
           <section className="mb-8">
-            <h2 className="mb-2 font-semibold text-stone-600 dark:text-stone-300">{t.rules}</h2>
+            {rulesHeading}
             <div className="space-y-3 rounded-2xl bg-white p-4 shadow-sm dark:bg-stone-800">
               <select
                 value={klaverjasRuleSetId}
@@ -189,11 +208,15 @@ export function Setup({
           </section>
 
           <section className="mb-8">
-            <h2 className="mb-2 font-semibold text-stone-600 dark:text-stone-300">{t.rules}</h2>
+            {rulesHeading}
             <div className="space-y-2 rounded-2xl bg-white p-4 shadow-sm dark:bg-stone-800">
               <select
                 value={ruleSetId}
-                onChange={(e) => setRuleSetId(e.target.value)}
+                onChange={(e) => {
+                  setRuleSetId(e.target.value)
+                  // Each variant has its own default limit.
+                  setTurnAt(hartenjagenRuleSets.find((r) => r.id === e.target.value)?.turnAt ?? turnAt)
+                }}
                 className="w-full rounded-xl border border-stone-200 bg-white px-3 py-3 text-base dark:border-stone-600 dark:bg-stone-800"
               >
                 {hartenjagenRuleSets.map((r) => (
@@ -202,9 +225,14 @@ export function Setup({
                   </option>
                 ))}
               </select>
-              <NumberField label={t.turnAt} value={turnAt} onChange={setTurnAt} />
-              <NumberField label={t.paymentPerPoint} value={perPointCents} onChange={setPerPointCents} />
-              <NumberField label={t.paymentGameFee} value={gameFeeCents} onChange={setGameFeeCents} />
+              <NumberField label={hasReturnGame(hartenjagenBase) ? t.turnAt : t.playTo} value={turnAt} onChange={setTurnAt} />
+              <Switch label={t.playForMoney} checked={playForMoney} onChange={setPlayForMoney} />
+              {playForMoney && (
+                <>
+                  <NumberField label={t.paymentPerPoint} value={perPointCents} onChange={setPerPointCents} />
+                  <NumberField label={t.paymentGameFee} value={gameFeeCents} onChange={setGameFeeCents} />
+                </>
+              )}
             </div>
           </section>
         </>
@@ -217,7 +245,35 @@ export function Setup({
       >
         {t.start}
       </button>
+
+      {showRules && (
+        <RulesDialog
+          ruleSet={gameType === 'klaverjassen' ? klaverjasRuleSet : hartenjagenRuleSet}
+          onClose={() => setShowRules(false)}
+        />
+      )}
     </div>
+  )
+}
+
+function Switch({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className="flex h-11 w-full items-center justify-between gap-3 text-left"
+    >
+      <span className="text-stone-600 dark:text-stone-300">{label}</span>
+      <span
+        className={`flex h-7 w-12 shrink-0 items-center rounded-full p-0.5 transition-colors ${
+          checked ? 'justify-end bg-red-700 dark:bg-red-400' : 'justify-start bg-stone-300 dark:bg-stone-600'
+        }`}
+      >
+        <span className="h-6 w-6 rounded-full bg-white shadow-sm dark:bg-stone-100" />
+      </span>
+    </button>
   )
 }
 

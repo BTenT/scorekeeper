@@ -45,6 +45,8 @@ export interface KlaverjasRound {
 export type Round = PointsRound | PitRound | KlaverjasRound
 
 export interface PaymentRules {
+  /** false when the game is not played for money; absent on games saved before this option → on */
+  enabled?: boolean
   /** euro per point of the loser's own final score */
   perPoint: number
   /** fixed euro fee per loser */
@@ -54,13 +56,21 @@ export interface PaymentRules {
 
 export type GameType = 'hartenjagen' | 'klaverjassen'
 
-export type KlaverjasVariant = 'volledig' | 'afgerond'
+export type KlaverjasVariant = 'volledig' | 'afgerond' | 'concours'
 
 export interface KlaverjasRules {
-  /** 'volledig' keeps raw scores (to 1600); 'afgerond' rounds to tens (82 → 8, to 160) */
+  /**
+   * 'volledig' keeps raw scores (to 1600); 'afgerond' rounds to tens (82 → 8, to 160);
+   * 'concours' keeps raw scores over a fixed number of potjes, with points, roem and pit apart
+   */
   variant: KlaverjasVariant
-  /** first team at or above this (in the variant's own units) wins */
+  /**
+   * First team at or above this (in the variant's own units) wins. In 'concours'
+   * this is only the card points across all potjes (2592): nobody wins by reaching it.
+   */
   target: number
+  /** 'concours' only: potjes in a game (16); the highest total after the last one wins */
+  potjes?: number
   /** card points dealt per potje, raw scale (162) */
   pointsPerPotje: number
   /** raw bonus for taking every trick (100; shows as 10 in 'afgerond') */
@@ -79,7 +89,9 @@ export interface RuleSet {
   /** informational card values, editable per game */
   cards: { label: string; value: number; count: number }[]
   pit: { selfDelta: number; othersDelta: number }
-  /** reaching this score (or more) flips a player into the return game */
+  /** false: no return game, the game ends once a player reaches turnAt; absent on older games → true */
+  returnGame?: boolean
+  /** reaching this score (or more) starts the return game, or ends the game when there is none */
   turnAt: number
   /** a return-phase player dropping below this wins */
   winBelow: number
@@ -93,6 +105,13 @@ export interface PlayerStanding {
   score: number
 }
 
+/** A concours score split into what is tallied apart, raw. */
+export interface ScoreParts {
+  points: number
+  roem: number
+  pit: number
+}
+
 export interface GameState {
   standings: PlayerStanding[]
   /** 'down' once any player has reached turnAt: from then on everyone counts down. */
@@ -103,6 +122,8 @@ export interface GameState {
    * has been recorded yet: the app must ask who declared out ("uitgemeld") first.
    */
   pendingTie: PlayerId[] | null
+  /** The game ended level: concours totals after the last potje, or several lowest players without a return game. */
+  draw?: boolean
 }
 
 export interface Game {

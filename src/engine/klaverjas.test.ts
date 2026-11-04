@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { dealerIdForRound, potjeResult, toVariantUnits } from './klaverjas'
+import { concoursTotals, dealerIdForRound, potjeParts, potjeResult, toVariantUnits } from './klaverjas'
 import { computeState, roundDeltas } from './scoring'
-import { klaverjasAfgerond, klaverjasVolledig } from './rules'
+import { klaverjasAfgerond, klaverjasConcours, klaverjasVolledig } from './rules'
 import { validatePlayerCount, validateRound } from './validation'
 import type { Game, KlaverjasRound } from './types'
 
@@ -12,6 +12,7 @@ const teams = [
 const ids = ['wij', 'zij']
 const volledig = klaverjasVolledig.klaverjas!
 const afgerond = klaverjasAfgerond.klaverjas!
+const concours = klaverjasConcours.klaverjas!
 
 function potje(partial: Partial<KlaverjasRound>): KlaverjasRound {
   return {
@@ -141,6 +142,86 @@ describe('computeKlaverjasState', () => {
     const state = computeState(game([big, after]))
     expect(state.winnerId).toBe('wij')
     expect(state.standings.find((s) => s.playerId === 'zij')!.score).toBe(0)
+  })
+})
+
+describe('concours', () => {
+  const sixteen = (r: KlaverjasRound) => Array.from({ length: 16 }, () => r)
+
+  it('deals 2592 card points over 16 potjes', () => {
+    expect(concours.potjes).toBe(16)
+    expect(concours.potjes! * concours.pointsPerPotje).toBe(concours.target)
+  })
+
+  it('splits a potje into points, roem and pit per team', () => {
+    const r = potje({ points: { wij: 162, zij: 0 }, roem: { wij: 20, zij: 0 }, pitTeamId: 'wij' })
+    expect(potjeParts(r, concours, ids)).toEqual({
+      wij: { points: 162, roem: 20, pit: 100 },
+      zij: { points: 0, roem: 0, pit: 0 },
+    })
+  })
+
+  it('sends points, roem and pit to the opponent when the trump team is nat', () => {
+    const r = potje({ points: { wij: 70, zij: 92 }, roem: { wij: 20, zij: 50 } })
+    expect(potjeParts(r, concours, ids)).toEqual({
+      wij: { points: 0, roem: 0, pit: 0 },
+      zij: { points: 162, roem: 70, pit: 0 },
+    })
+  })
+
+  it('keeps the nat rule: an exact tie incl. roem is nat, roem can rescue', () => {
+    const tie = potje({ points: { wij: 81, zij: 81 } })
+    expect(potjeResult(tie, concours, ids).nat).toBe(true)
+    const rescued = potje({ points: { wij: 80, zij: 82 }, roem: { wij: 50, zij: 0 } })
+    expect(potjeResult(rescued, concours, ids).nat).toBe(false)
+  })
+
+  it('never rounds', () => {
+    const r = potje({ points: { wij: 97, zij: 65 }, countedTeamId: 'wij' })
+    expect(potjeResult(r, concours, ids).deltas).toEqual({ wij: 97, zij: 65 })
+  })
+
+  it('tallies parts apart, and card points always sum to 2592 over 16 potjes', () => {
+    const rounds = sixteen(potje({ points: { wij: 100, zij: 62 }, roem: { wij: 20, zij: 0 } }))
+    rounds[3] = potje({ points: { wij: 0, zij: 162 }, trumpTeamId: 'zij', pitTeamId: 'zij' })
+    const totals = concoursTotals(game(rounds, klaverjasConcours))
+    expect(totals).toEqual({
+      wij: { points: 1500, roem: 300, pit: 0 },
+      zij: { points: 1092, roem: 0, pit: 100 },
+    })
+    expect(totals.wij.points + totals.zij.points).toBe(2592)
+  })
+
+  it('has no winner before the last potje, however high the score', () => {
+    const big = potje({ points: { wij: 162, zij: 0 }, roem: { wij: 2000, zij: 0 }, pitTeamId: 'wij' })
+    const state = computeState(game(sixteen(big).slice(0, 15), klaverjasConcours))
+    expect(state.winnerId).toBeNull()
+    expect(state.draw).toBeUndefined()
+  })
+
+  it('crowns the highest total after the last potje, roem and pit included', () => {
+    // Zij has fewer card points but wins on roem.
+    const rounds = sixteen(potje({ points: { wij: 90, zij: 72 } }))
+    rounds[15] = potje({ trumpTeamId: 'zij', points: { wij: 80, zij: 82 }, roem: { wij: 0, zij: 500 } })
+    const state = computeState(game(rounds, klaverjasConcours))
+    expect(state.standings.map((s) => s.score)).toEqual([1430, 1662])
+    expect(state.winnerId).toBe('zij')
+  })
+
+  it('is a draw when the totals are level after the last potje', () => {
+    const level = sixteen(potje({ points: { wij: 82, zij: 80 } })).map((r, i) =>
+      i % 2 ? { ...r, trumpTeamId: 'zij', points: { wij: 80, zij: 82 } } : r,
+    )
+    const state = computeState(game(level, klaverjasConcours))
+    expect(state.standings.map((s) => s.score)).toEqual([1296, 1296])
+    expect(state.winnerId).toBeNull()
+    expect(state.draw).toBe(true)
+  })
+
+  it('deals every team 8 times, so 4 times per player', () => {
+    const g = game([], klaverjasConcours)
+    const deals = Array.from({ length: 16 }, (_, i) => dealerIdForRound(g, i))
+    expect(deals.filter((id) => id === 'wij')).toHaveLength(8)
   })
 })
 

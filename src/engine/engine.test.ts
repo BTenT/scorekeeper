@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { huisregels } from './rules'
+import { amerikaans, hartenjagenRuleSets, huisregels, nederlands15 } from './rules'
 import { computeState, stateHistory } from './scoring'
 import { validateRound, validatePlayerCount } from './validation'
-import { computePayments, totalForWinner, formatEuro } from './payment'
-import type { Game, Round } from './types'
+import { computePayments, playsForMoney, totalForWinner, formatEuro } from './payment'
+import type { Game, GameState, Round } from './types'
 
 const players = [
   { id: 'a', name: 'Anna' },
@@ -166,6 +166,144 @@ describe('scoring', () => {
     expect(history).toHaveLength(2)
     expect(history[0].standings[0].score).toBe(25)
     expect(history[1].standings[1].score).toBe(25)
+  })
+})
+
+describe('variants', () => {
+  it('has card values that add up to the points per round', () => {
+    for (const r of hartenjagenRuleSets) {
+      expect(r.cards.reduce((sum, c) => sum + c.value * c.count, 0)).toBe(r.pointsPerRound)
+    }
+    expect(hartenjagenRuleSets.map((r) => r.pointsPerRound)).toEqual([25, 15, 26])
+  })
+
+  it('validates a round against its own total', () => {
+    const r15 = points({ a: 15, b: 0, c: 0, d: 0 })
+    const r26 = points({ a: 26, b: 0, c: 0, d: 0 })
+    expect(validateRound(r15, nederlands15, ids).valid).toBe(true)
+    expect(validateRound(r15, huisregels, ids).valid).toBe(false)
+    expect(validateRound(r26, amerikaans, ids).valid).toBe(true)
+    expect(validateRound(r26, nederlands15, ids).valid).toBe(false)
+  })
+
+  it('starts the return game at 50 in Nederlands (15 punten)', () => {
+    const round = points({ a: 15, b: 0, c: 0, d: 0 })
+    const rounds = (n: number) => ({ ...game(Array.from({ length: n }, () => round)), ruleSet: nederlands15 })
+    expect(nederlands15.turnAt).toBe(50)
+    expect(computeState(rounds(3)).phase).toBe('up') // a = 45
+    expect(computeState(rounds(4)).phase).toBe('down') // a = 60
+    expect(computeState(rounds(8)).winnerId).toBeNull() // a = 0: exactly 0 is no win
+    expect(computeState(rounds(9)).winnerId).toBe('a') // a = -15
+  })
+
+  it('scales the pit to the points per round', () => {
+    const g = { ...game([{ kind: 'pit', playerId: 'a', choice: 'others' }]), ruleSet: nederlands15 }
+    expect(computeState(g).standings.map((s) => s.score)).toEqual([0, 15, 15, 15])
+  })
+})
+
+describe('amerikaans (no return game)', () => {
+  const am = (rounds: Round[], ruleSet = amerikaans): Game => ({ ...game(rounds), ruleSet })
+  // a takes everything for 3 rounds: 78 points, the others stay level.
+  const aTo78 = Array.from({ length: 3 }, () => points({ a: 26, b: 0, c: 0, d: 0 }))
+
+  it('never starts a return game and has no winner below the target', () => {
+    const state = computeState(am(aTo78))
+    expect(state.phase).toBe('up')
+    expect(state.winnerId).toBeNull()
+    expect(state.draw).toBeUndefined()
+  })
+
+  it('ends at exactly 100 and the lowest player wins', () => {
+    const state = computeState(
+      am([...aTo78, points({ a: 22, b: 1, c: 3, d: 0 }) /* a = 100 */]),
+    )
+    expect(state.standings.find((s) => s.playerId === 'a')!.score).toBe(100)
+    expect(state.phase).toBe('up')
+    expect(state.winnerId).toBe('d')
+  })
+
+  it('ends on overshoot too', () => {
+    const state = computeState(am([...aTo78, points({ a: 25, b: 1, c: 0, d: 0 }), points({ a: 0, b: 0, c: 13, d: 13 })]))
+    expect(state.standings.map((s) => s.score)).toEqual([103, 1, 0, 0])
+    expect(state.draw).toBe(true)
+  })
+
+  it('is a draw without winner or payments when several players are lowest', () => {
+    const state = computeState(am([...aTo78, points({ a: 26, b: 0, c: 0, d: 0 })]))
+    expect(state.standings.map((s) => s.score)).toEqual([104, 0, 0, 0])
+    expect(state.winnerId).toBeNull()
+    expect(state.draw).toBe(true)
+    expect(computePayments(state, amerikaans)).toEqual([])
+  })
+
+  it('does not need the target to be 100', () => {
+    const ruleSet = { ...amerikaans, turnAt: 50 }
+    const state = computeState(am([points({ a: 26, b: 0, c: 0, d: 0 }), points({ a: 24, b: 2, c: 0, d: 0 })], ruleSet))
+    expect(state.standings.map((s) => s.score)).toEqual([50, 2, 0, 0])
+    expect(state.draw).toBe(true)
+  })
+
+  it('counts a negative score from a pit as a lead, not as a win', () => {
+    const state = computeState(am([{ kind: 'pit', playerId: 'b', choice: 'self' }]))
+    expect(state.standings.find((s) => s.playerId === 'b')!.score).toBe(-26)
+    expect(state.winnerId).toBeNull()
+  })
+
+  it('can end on a pit, and the pit taker then wins', () => {
+    const rounds: Round[] = [...aTo78, { kind: 'pit', playerId: 'b', choice: 'others' }]
+    const state = computeState(am(rounds))
+    expect(state.standings.map((s) => s.score)).toEqual([104, 0, 26, 26])
+    expect(state.winnerId).toBe('b')
+  })
+
+  it('settles with the winner on the usual formula', () => {
+    const state = computeState(am([...aTo78, points({ a: 22, b: 1, c: 3, d: 0 })]))
+    const on = { ...amerikaans, payment: { ...amerikaans.payment, enabled: true } }
+    expect(computePayments(state, on)).toEqual([
+      { from: 'a', to: 'd', amount: 5.5 },
+      { from: 'b', to: 'd', amount: 0.55 },
+      { from: 'c', to: 'd', amount: 0.65 },
+    ])
+  })
+
+  it('keeps the return game on games saved before the option existed', () => {
+    const old = { ...huisregels, pointsPerRound: 26 }
+    expect(old.returnGame).toBeUndefined()
+    const rounds = Array.from({ length: 4 }, () => points({ a: 26, b: 0, c: 0, d: 0 }))
+    const state = computeState({ ...game(rounds), ruleSet: old })
+    expect(state.phase).toBe('down')
+    expect(state.winnerId).toBeNull()
+  })
+})
+
+describe('playing for money', () => {
+  const won: GameState = {
+    standings: [
+      { playerId: 'a', score: -1 },
+      { playerId: 'b', score: 40 },
+    ],
+    phase: 'down',
+    winnerId: 'a',
+    pendingTie: null,
+  }
+
+  it('settles nothing when switched off', () => {
+    const off = { ...huisregels, payment: { ...huisregels.payment, enabled: false } }
+    expect(playsForMoney(off)).toBe(false)
+    expect(computePayments(won, off)).toEqual([])
+  })
+
+  it('settles as before when switched on', () => {
+    const on = { ...huisregels, payment: { ...huisregels.payment, enabled: true } }
+    expect(playsForMoney(on)).toBe(true)
+    expect(computePayments(won, on)).toEqual([{ from: 'b', to: 'a', amount: 2.5 }])
+  })
+
+  it('keeps settling games saved before the option existed', () => {
+    expect(huisregels.payment.enabled).toBeUndefined()
+    expect(playsForMoney(huisregels)).toBe(true)
+    expect(computePayments(won, huisregels)).toEqual([{ from: 'b', to: 'a', amount: 2.5 }])
   })
 })
 

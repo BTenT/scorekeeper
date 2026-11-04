@@ -17,7 +17,7 @@ export function validateRound(round: Round, ruleSet: RuleSet, playerIds: PlayerI
     }
     for (const record of [round.points, round.roem]) {
       for (const [id, value] of Object.entries(record)) {
-        if (!playerIds.includes(id)) return { valid: false, error: 'Onbekend team in potje.' }
+        if (!playerIds.includes(id)) return { valid: false, error: 'Onbekend team in ronde.' }
         if (!Number.isInteger(value) || value < 0) {
           return { valid: false, error: 'Punten en roem moeten hele getallen van 0 of meer zijn.' }
         }
